@@ -153,8 +153,8 @@ services:
 
   frontend-shell:
     build:
-      context: apps/frontend-shell
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/frontend-shell/Dockerfile
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:80"]
       interval: 10s
@@ -163,8 +163,8 @@ services:
 
   frontend-viewer:
     build:
-      context: apps/frontend-viewer
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/frontend-viewer/Dockerfile
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:80"]
       interval: 10s
@@ -173,8 +173,8 @@ services:
 
   frontend-pipeline:
     build:
-      context: apps/frontend-pipeline
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/frontend-pipeline/Dockerfile
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:80"]
       interval: 10s
