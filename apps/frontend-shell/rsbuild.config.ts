@@ -10,8 +10,8 @@ export default defineConfig({
         new ModuleFederationPlugin({
           name: 'shell',
           remotes: {
-            viewer: `viewer@${process.env['VIEWER_URL'] ?? 'http://localhost:5001'}/mf-manifest.json`,
-            pipeline: `pipeline@${process.env['PIPELINE_URL'] ?? 'http://localhost:5002'}/mf-manifest.json`,
+            viewer: `viewer@${process.env['VIEWER_URL'] ?? 'http://localhost/remotes/viewer'}/mf-manifest.json`,
+            pipeline: `pipeline@${process.env['PIPELINE_URL'] ?? 'http://localhost/remotes/pipeline'}/mf-manifest.json`,
           },
           shared: {
             react: { singleton: true, requiredVersion: '^18.3.1' },

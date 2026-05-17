@@ -2,7 +2,7 @@ services:
   # ─── Infrastructure ───────────────────────────────────────────────────────────
 
   kafka:
-    image: bitnami/kafka:3.7
+    image: bitnamilegacy/kafka:3.7
     environment:
       KAFKA_CFG_NODE_ID: 1
       KAFKA_CFG_PROCESS_ROLES: controller,broker
@@ -13,7 +13,7 @@ services:
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "true"
     volumes:
-      - kafka_data:/bitnami/kafka
+      - kafka_data:/bitnamilegacy/kafka
     healthcheck:
       test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 10s
@@ -46,6 +46,24 @@ services:
       timeout: 5s
       retries: 10
 
+  init-kafka:
+    image: bitnamilegacy/kafka:3.7
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command:
+      - /bin/bash
+      - -c
+      - |
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic telegram.raw --partitions 1 --replication-factor 1
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic telegram.raw.dlt --partitions 1 --replication-factor 1
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic pipeline.filtered --partitions 1 --replication-factor 1
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic config.sources.changed --partitions 1 --replication-factor 1
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic config.pipelines.changed --partitions 1 --replication-factor 1
+        kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic config.users.telegram.changed --partitions 1 --replication-factor 1
+        echo "All Kafka topics created"
+    restart: "no"
+
   # ─── Backend Services ─────────────────────────────────────────────────────────
 
   config-api:
@@ -62,8 +80,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
       interval: 10s
@@ -82,8 +100,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3003/health"]
       interval: 10s
@@ -102,8 +120,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3004/health"]
       interval: 10s
@@ -120,8 +138,8 @@ services:
       KAFKA_BROKERS: kafka:9092
       DATABASE_URL: postgres://tg_pipeline:${POSTGRES_PASSWORD:-tg_pipeline_dev}@postgres:5432/tg_pipeline
     depends_on:
-      kafka:
-        condition: service_healthy
+      init-kafka:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
     healthcheck:

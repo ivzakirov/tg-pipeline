@@ -15,6 +15,7 @@ import { PipelineEntity } from './pipelines/pipeline.entity';
 import { PipelineSourceEntity } from './pipelines/pipeline-source.entity';
 import { MessageEntity } from './messages/message.entity';
 import { TelegramSessionEntity } from './telegram-auth/telegram-session.entity';
+import { RefreshTokenEntity } from './auth/refresh-token.entity';
 
 @Module({
   imports: [
@@ -31,10 +32,9 @@ import { TelegramSessionEntity } from './telegram-auth/telegram-session.entity';
           PipelineSourceEntity,
           MessageEntity,
           TelegramSessionEntity,
+          RefreshTokenEntity,
         ],
-        migrations: ['dist/database/migrations/*.js'],
-        migrationsRun: true,
-        synchronize: false,
+        synchronize: true,
       }),
     }),
     KafkaModule,

@@ -17,6 +17,7 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
     const kafka = new Kafka({
       brokers: config.getOrThrow<string>('KAFKA_BROKERS').split(','),
       clientId: 'realtime-gateway-consumer',
+      retry: { retries: 10, initialRetryTime: 500, maxRetryTime: 15000 },
     });
     this.consumer = kafka.consumer({ groupId: 'realtime-gateway-group' });
   }
@@ -27,8 +28,25 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
       topics: [KAFKA_TOPICS.PIPELINE_FILTERED],
       fromBeginning: false,
     });
+
+    this.consumer.on(this.consumer.events.CRASH, ({ payload }) => {
+      this.logger.error('Kafka consumer crashed, restarting...', payload.error?.message);
+      setTimeout(() => this.restartConsumer(), 3000);
+    });
+
     await this.consumer.run({ eachMessage: (p) => this.dispatch(p) });
     this.logger.log('Kafka consumer started');
+  }
+
+  private async restartConsumer() {
+    try {
+      await this.consumer.disconnect();
+      await this.consumer.connect();
+      await this.consumer.run({ eachMessage: (p) => this.dispatch(p) });
+    } catch (err) {
+      this.logger.error('Consumer restart failed', err);
+      setTimeout(() => this.restartConsumer(), 5000);
+    }
   }
 
   private async dispatch({ message }: EachMessagePayload) {

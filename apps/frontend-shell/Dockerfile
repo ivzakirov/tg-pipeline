@@ -3,7 +3,9 @@ RUN npm install -g pnpm
 WORKDIR /app
 COPY package.json ./
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
+ARG VIEWER_URL
+ARG PIPELINE_URL
 RUN pnpm build
 
 FROM nginx:alpine AS runner

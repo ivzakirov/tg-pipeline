@@ -8,7 +8,7 @@ COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/kafka-schemas/package.json ./packages/kafka-schemas/
 COPY packages/logger/package.json ./packages/logger/
 COPY apps/realtime-gateway/package.json ./apps/realtime-gateway/
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile --shamefully-hoist
 
 FROM deps AS builder
 COPY packages/ ./packages/

@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
@@ -13,6 +14,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
         <Route
           element={
             <ProtectedRoute>

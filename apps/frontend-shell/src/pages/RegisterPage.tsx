@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { authStore } from '../auth/auth-store';
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,11 +15,11 @@ export default function LoginPage() {
     setLoading(true);
     setError('');
     try {
-      const { data } = await api.post('/auth/login', { email, password });
+      const { data } = await api.post('/auth/register', { email, password });
       authStore.setToken(data.accessToken);
       navigate('/');
-    } catch {
-      setError('Invalid email or password');
+    } catch (err: any) {
+      setError(err.response?.data?.message ?? 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -45,14 +45,15 @@ export default function LoginPage() {
             value={password}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
             required
+            minLength={8}
           />
           {error && <p style={styles.error}>{error}</p>}
           <button style={styles.button} type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Creating account...' : 'Create account'}
           </button>
         </form>
         <p style={styles.footer}>
-          No account? <Link to="/register" style={styles.link}>Create one</Link>
+          Already have an account? <Link to="/login" style={styles.link}>Sign in</Link>
         </p>
       </div>
     </div>

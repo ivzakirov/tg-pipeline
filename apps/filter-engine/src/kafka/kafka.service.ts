@@ -26,6 +26,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     const kafka = new Kafka({
       brokers: config.getOrThrow<string>('KAFKA_BROKERS').split(','),
       clientId: 'filter-engine-consumer',
+      retry: { retries: 10, initialRetryTime: 500, maxRetryTime: 15000 },
     });
     this.consumer = kafka.consumer({ groupId: 'filter-engine-group' });
   }
@@ -37,7 +38,24 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
       topics: [KAFKA_TOPICS.TELEGRAM_RAW, KAFKA_TOPICS.CONFIG_PIPELINES_CHANGED],
       fromBeginning: false,
     });
+
+    this.consumer.on(this.consumer.events.CRASH, ({ payload }) => {
+      this.logger.error('Kafka consumer crashed, restarting...', payload.error?.message);
+      setTimeout(() => this.restartConsumer(), 3000);
+    });
+
     await this.consumer.run({ eachMessage: (p) => this.dispatch(p) });
+  }
+
+  private async restartConsumer() {
+    try {
+      await this.consumer.disconnect();
+      await this.consumer.connect();
+      await this.consumer.run({ eachMessage: (p) => this.dispatch(p) });
+    } catch (err) {
+      this.logger.error('Consumer restart failed', err);
+      setTimeout(() => this.restartConsumer(), 5000);
+    }
   }
 
   publishFiltered(msg: FilteredMessage) {
@@ -58,7 +76,11 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     const payload = JSON.parse(message.value.toString());
 
     if (topic === KAFKA_TOPICS.TELEGRAM_RAW) {
-      await this.processor.process(payload as RawTelegramMessage);
+      await this.processor.process(
+        payload as RawTelegramMessage,
+        (msg) => this.publishFiltered(msg),
+        (msg, err) => this.publishToDlt(msg, err),
+      );
     } else if (topic === KAFKA_TOPICS.CONFIG_PIPELINES_CHANGED) {
       const e = payload as ConfigPipelinesChangedEvent;
       this.logger.log(`Pipeline ${e.action}: ${e.pipelineId}`);

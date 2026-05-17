@@ -4,6 +4,9 @@ import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 
 export default defineConfig({
   plugins: [pluginReact()],
+  output: {
+    assetPrefix: process.env['ASSET_PREFIX'] ?? 'http://localhost/remotes/viewer/',
+  },
   tools: {
     rspack: {
       plugins: [

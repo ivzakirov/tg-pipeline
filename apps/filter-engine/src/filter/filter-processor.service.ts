@@ -4,8 +4,7 @@ import { Repository } from 'typeorm';
 import { evaluate } from './filter-evaluator';
 import { PipelineIndexService } from './pipeline-index.service';
 import { MessageEntity } from '../database/message.entity';
-import { KafkaService } from '../kafka/kafka.service';
-import type { RawTelegramMessage } from '@tg-pipeline/kafka-schemas';
+import type { FilteredMessage, RawTelegramMessage } from '@tg-pipeline/kafka-schemas';
 
 @Injectable()
 export class FilterProcessorService {
@@ -13,12 +12,15 @@ export class FilterProcessorService {
 
   constructor(
     private readonly index: PipelineIndexService,
-    private readonly kafka: KafkaService,
     @InjectRepository(MessageEntity)
     private readonly messageRepo: Repository<MessageEntity>,
   ) {}
 
-  async process(raw: RawTelegramMessage): Promise<void> {
+  async process(
+    raw: RawTelegramMessage,
+    onFiltered: (msg: FilteredMessage) => void,
+    onDlt: (msg: RawTelegramMessage, error: string) => void,
+  ): Promise<void> {
     const pipelines = this.index.getPipelinesForMessage(raw.userId, raw.channelId);
 
     await Promise.all(
@@ -40,14 +42,10 @@ export class FilterProcessorService {
             }),
           );
 
-          this.kafka.publishFiltered({
-            ...raw,
-            pipelineId: pipeline.id,
-            pipelineName: pipeline.name,
-          });
+          onFiltered({ ...raw, pipelineId: pipeline.id, pipelineName: pipeline.name });
         } catch (err) {
           this.logger.error(`Error processing pipeline ${pipeline.id}`, err);
-          this.kafka.publishToDlt(raw, err instanceof Error ? err.message : String(err));
+          onDlt(raw, err instanceof Error ? err.message : String(err));
         }
       }),
     );
