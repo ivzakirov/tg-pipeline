@@ -7,6 +7,8 @@ export function useSocket(
   onMessage: (msg: Message) => void,
 ) {
   const socketRef = useRef<Socket | null>(null);
+  const onMessageRef = useRef(onMessage);
+  onMessageRef.current = onMessage;
 
   useEffect(() => {
     if (!token) return;
@@ -17,7 +19,7 @@ export function useSocket(
       transports: ['websocket'],
     });
 
-    socket.on('message', onMessage);
+    socket.on('message', (msg: Message) => onMessageRef.current(msg));
     socketRef.current = socket;
 
     return () => { socket.disconnect(); };

@@ -30,6 +30,7 @@
     "bcryptjs": "^2.4.3",
     "ioredis": "^5.4.1",
     "telegram": "^2.26.22",
+    "cookie-parser": "^1.4.7",
     "class-validator": "^0.14.1",
     "class-transformer": "^0.5.1",
     "reflect-metadata": "^0.2.2",
@@ -48,6 +49,7 @@
     "@types/passport-jwt": "^4.0.1",
     "ts-node": "^10.9.2",
     "typeorm-ts-node-commonjs": "^0.3.20",
+    "@types/cookie-parser": "^1.4.8",
     "@types/express": "^5.0.0",
     "dotenv": "^16.4.7"
   }

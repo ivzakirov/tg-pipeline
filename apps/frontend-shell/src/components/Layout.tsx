@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { authStore } from '../auth/auth-store';
 import api from '../api/axios';
+import TelegramAuthWidget from './TelegramAuthWidget';
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function Layout() {
           <NavLink to="/" style={navStyle} end>Messages</NavLink>
           <NavLink to="/pipelines" style={navStyle}>Pipelines</NavLink>
         </div>
+        <TelegramAuthWidget />
         <button style={styles.logout} onClick={handleLogout}>Logout</button>
       </nav>
       <main style={styles.main}>

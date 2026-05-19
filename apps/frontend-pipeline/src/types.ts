@@ -21,6 +21,6 @@ export interface Pipeline {
   id: string;
   name: string;
   enabled: boolean;
-  filterConfig: FilterGroup | null;
+  filterConfig: FilterGroup | FilterCondition | null;
   pipelineSources: { source: Source }[];
 }

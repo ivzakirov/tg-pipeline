@@ -3,10 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { authStore } from '../auth/auth-store';
 
+const REMEMBER_KEY = 'tg_remember_email';
+
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem(REMEMBER_KEY) ?? '');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem(REMEMBER_KEY));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,6 +20,11 @@ export default function LoginPage() {
     try {
       const { data } = await api.post('/auth/login', { email, password });
       authStore.setToken(data.accessToken);
+      if (rememberMe) {
+        localStorage.setItem(REMEMBER_KEY, email);
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
+      }
       navigate('/');
     } catch {
       setError('Invalid email or password');
@@ -46,6 +54,14 @@ export default function LoginPage() {
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
             required
           />
+          <label style={styles.rememberRow}>
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            <span>Remember me</span>
+          </label>
           {error && <p style={styles.error}>{error}</p>}
           <button style={styles.button} type="submit" disabled={loading}>
             {loading ? 'Signing in...' : 'Sign in'}
@@ -65,6 +81,7 @@ const styles: Record<string, React.CSSProperties> = {
   title: { fontSize: '24px', fontWeight: 700, marginBottom: '24px', textAlign: 'center' },
   form: { display: 'flex', flexDirection: 'column', gap: '12px' },
   input: { padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '15px', outline: 'none' },
+  rememberRow: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#555', cursor: 'pointer' },
   button: { padding: '12px', borderRadius: '8px', background: '#2AABEE', color: '#fff', border: 'none', fontSize: '15px', fontWeight: 600, cursor: 'pointer' },
   error: { color: '#e53935', fontSize: '13px' },
   footer: { marginTop: '16px', textAlign: 'center', fontSize: '14px', color: '#666' },

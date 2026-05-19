@@ -1,5 +1,5 @@
 import React from 'react';
-import { Handle, Position, NodeProps } from '@xyflow/react';
+import { Handle, Position, NodeProps, useReactFlow } from '@xyflow/react';
 
 export interface SourceNodeData {
   label: string;
@@ -8,15 +8,22 @@ export interface SourceNodeData {
   [key: string]: unknown;
 }
 
-export default function SourceNode({ data }: NodeProps) {
+export default function SourceNode({ id, data }: NodeProps) {
   const d = data as SourceNodeData;
+  const { deleteElements } = useReactFlow();
   return (
     <div style={styles.wrapper}>
       <div style={styles.icon}>{d.type === 'channel' ? '📢' : '👥'}</div>
-      <div>
+      <div style={{ flex: 1 }}>
         <div style={styles.label}>{d.label}</div>
         <div style={styles.sub}>@{d.telegramId}</div>
       </div>
+      <button
+        className="nodrag"
+        style={styles.deleteBtn}
+        onClick={() => deleteElements({ nodes: [{ id }] })}
+        title="Remove from canvas"
+      >×</button>
       <Handle type="source" position={Position.Right} />
     </div>
   );
@@ -27,4 +34,5 @@ const styles: Record<string, React.CSSProperties> = {
   icon: { fontSize: '20px' },
   label: { fontWeight: 600, fontSize: '13px' },
   sub: { fontSize: '11px', color: '#666' },
+  deleteBtn: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', lineHeight: 1, color: '#bbb', padding: '0 2px', borderRadius: '3px' },
 };
