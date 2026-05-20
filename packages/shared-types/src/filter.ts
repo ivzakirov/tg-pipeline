@@ -9,6 +9,7 @@ export interface FilterCondition {
   type: FilterConditionType;
   value?: string | string[];
   negate?: boolean;
+  label?: string;
 }
 
 export interface FilterGroup {

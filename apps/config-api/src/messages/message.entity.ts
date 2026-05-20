@@ -34,6 +34,18 @@ export class MessageEntity {
   @Column({ nullable: true })
   mediaUrl: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  mediaMimeType: string | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  replyToMsgId: number | null;
+
+  @Column({ type: 'text', nullable: true })
+  replyToText: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  replyToSenderName: string | null;
+
   @CreateDateColumn()
   receivedAt: Date;
 }

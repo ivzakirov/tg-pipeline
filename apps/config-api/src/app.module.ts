@@ -16,6 +16,10 @@ import { PipelineSourceEntity } from './pipelines/pipeline-source.entity';
 import { MessageEntity } from './messages/message.entity';
 import { TelegramSessionEntity } from './telegram-auth/telegram-session.entity';
 import { RefreshTokenEntity } from './auth/refresh-token.entity';
+import { AvatarCacheEntity } from './avatars/avatar-cache.entity';
+import { AvatarsModule } from './avatars/avatars.module';
+import { MediaCacheEntity } from './media/media-cache.entity';
+import { MediaModule } from './media/media.module';
 
 @Module({
   imports: [
@@ -33,6 +37,8 @@ import { RefreshTokenEntity } from './auth/refresh-token.entity';
           MessageEntity,
           TelegramSessionEntity,
           RefreshTokenEntity,
+          AvatarCacheEntity,
+          MediaCacheEntity,
         ],
         synchronize: true,
       }),
@@ -44,6 +50,8 @@ import { RefreshTokenEntity } from './auth/refresh-token.entity';
     PipelinesModule,
     MessagesModule,
     TelegramAuthModule,
+    AvatarsModule,
+    MediaModule,
     HealthModule,
   ],
 })

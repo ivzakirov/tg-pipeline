@@ -29,6 +29,16 @@ export class FilterProcessorService {
           const passes = pipeline.filterConfig ? evaluate(pipeline.filterConfig, raw) : true;
           if (!passes) return;
 
+          let replyToText: string | null = null;
+          let replyToSenderName: string | null = null;
+          if (raw.replyToMsgId) {
+            const replyMsg = await this.messageRepo.findOne({
+              where: { telegramMessageId: raw.replyToMsgId as any, channelId: raw.channelId as any },
+            });
+            replyToText = replyMsg?.text ? replyMsg.text.slice(0, 150) : null;
+            replyToSenderName = replyMsg?.senderName ?? null;
+          }
+
           await this.messageRepo.save(
             this.messageRepo.create({
               pipelineId: pipeline.id,
@@ -39,10 +49,20 @@ export class FilterProcessorService {
               text: raw.text,
               mediaType: raw.mediaType,
               mediaUrl: raw.mediaUrl,
+              mediaMimeType: raw.mediaMimeType ?? null,
+              replyToMsgId: raw.replyToMsgId ?? null,
+              replyToText,
+              replyToSenderName,
             }),
           );
 
-          onFiltered({ ...raw, pipelineId: pipeline.id, pipelineName: pipeline.name });
+          onFiltered({
+            ...raw,
+            pipelineId: pipeline.id,
+            pipelineName: pipeline.name,
+            replyToText: replyToText ?? undefined,
+            replyToSenderName: replyToSenderName ?? undefined,
+          });
         } catch (err) {
           this.logger.error(`Error processing pipeline ${pipeline.id}`, err);
           onDlt(raw, err instanceof Error ? err.message : String(err));

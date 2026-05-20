@@ -1,2 +1,68 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #111; }
+
+:root {
+  --bg-body:       #f0f2f5;
+  --bg-primary:    #ffffff;
+  --bg-secondary:  #f8f9fa;
+  --bg-active:     #e8f4fd;
+  --bg-reply:      #f0f7ff;
+  --bg-badge:      #f0f0f0;
+  --bg-input:      #ffffff;
+  --bg-nav:        #1c2733;
+  --border-color:  #e5e5e5;
+  --border-light:  #f0f0f0;
+  --border-input:  #dddddd;
+  --text-primary:  #222222;
+  --text-secondary:#888888;
+  --text-muted:    #aaaaaa;
+  --text-badge:    #666666;
+  --shadow-card:   rgba(0,0,0,.08);
+  --bg-highlight:  #e3f2fd;
+  --src-item-hover:#f0f8ff;
+}
+
+html.dark {
+  --bg-body:       #0f1923;
+  --bg-primary:    #17212b;
+  --bg-secondary:  #1c2733;
+  --bg-active:     #1e3a5f;
+  --bg-reply:      #1a2840;
+  --bg-badge:      #2a3547;
+  --bg-input:      #1c2733;
+  --bg-nav:        #0d1117;
+  --border-color:  #2a3a4a;
+  --border-light:  #1e2e3e;
+  --border-input:  #3a4a5a;
+  --text-primary:  #e8eaed;
+  --text-secondary:#8899aa;
+  --text-muted:    #6c737a;
+  --text-badge:    #8899aa;
+  --shadow-card:   rgba(0,0,0,.4);
+  --bg-highlight:  #1e3a5f;
+  --src-item-hover:#1e3a5f;
+}
+
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg-body); color: var(--text-primary); }
+
+/* Scrollbar — WebKit */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+:root {
+  --scrollbar-thumb:       #c8cdd2;
+  --scrollbar-thumb-hover: #a0a8b0;
+}
+html.dark {
+  --scrollbar-thumb:       #2e4055;
+  --scrollbar-thumb-hover: #3e5570;
+}
+
+/* Scrollbar — Firefox */
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+
+/* React Flow dark overrides */
+html.dark .react-flow { background: #17212b; }
+html.dark .react-flow__background { background: #17212b; }
+html.dark .react-flow__background pattern { color: #2a3a4a; }

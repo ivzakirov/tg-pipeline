@@ -102,6 +102,8 @@ services:
         condition: service_healthy
       init-kafka:
         condition: service_completed_successfully
+      config-api:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3003/health"]
       interval: 10s
@@ -180,6 +182,17 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   # ─── Nginx (API Gateway + static) ─────────────────────────────────────────────
 

@@ -36,6 +36,9 @@ export class SourceEntity {
   @Column({ default: true })
   enabled: boolean;
 
+  @Column({ type: 'bigint', default: 0 })
+  lastTelegramMsgId: number;
+
   @OneToMany(() => PipelineSourceEntity, (ps) => ps.source)
   pipelineSources: PipelineSourceEntity[];
 }

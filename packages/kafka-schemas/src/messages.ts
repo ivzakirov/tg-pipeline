@@ -7,12 +7,16 @@ export interface RawTelegramMessage {
   text: string;
   mediaType?: string;
   mediaUrl?: string;
+  mediaMimeType?: string;
   timestamp: string; // ISO 8601
+  replyToMsgId?: number;
 }
 
 export interface FilteredMessage extends RawTelegramMessage {
   pipelineId: string;
   pipelineName: string;
+  replyToText?: string;
+  replyToSenderName?: string;
 }
 
 export interface RawTelegramMessageDlt {

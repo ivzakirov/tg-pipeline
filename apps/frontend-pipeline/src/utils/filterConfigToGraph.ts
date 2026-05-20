@@ -69,6 +69,7 @@ export function filterConfigToGraph(
           filterType: config.type,
           value: Array.isArray(config.value) ? config.value.join(', ') : (config.value ?? ''),
           negate: config.negate ?? false,
+          label: config.label,
         },
       });
       return { nodeId, centerY: yStart + LEAF_HEIGHT / 2, totalHeight: LEAF_HEIGHT };

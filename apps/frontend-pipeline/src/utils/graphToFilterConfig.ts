@@ -43,6 +43,7 @@ export function graphToFilterConfig(
       type: d.filterType as FilterCondition['type'],
       value: d.value,
       negate: d.negate,
+      ...(d.label ? { label: d.label } : {}),
     };
   }
 

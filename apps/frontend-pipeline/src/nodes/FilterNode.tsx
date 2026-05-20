@@ -5,13 +5,14 @@ export interface FilterNodeData {
   filterType: 'keyword' | 'regex' | 'sender' | 'has_media' | 'media_type' | 'AND' | 'OR' | 'NOT';
   value?: string;
   negate?: boolean;
+  label?: string;
   [key: string]: unknown;
 }
 
 const TYPE_LABELS: Record<string, string> = {
   keyword: '🔤 Keyword',
   regex: '🔣 Regex',
-  sender: '👤 Sender ID',
+  sender: '👤 Sender',
   has_media: '📎 Has Media',
   media_type: '🖼 Media Type',
   AND: '⋀ AND',
@@ -22,7 +23,7 @@ const TYPE_LABELS: Record<string, string> = {
 const VALUE_PLACEHOLDER: Record<string, string> = {
   keyword: 'e.g. bitcoin',
   regex: 'e.g. \\d{4}',
-  sender: 'numeric sender ID',
+  sender: 'sender name or ID',
   media_type: 'photo / video / document',
 };
 
@@ -54,8 +55,8 @@ export default function FilterNode({ id, data }: NodeProps) {
           style={styles.input}
           className="nodrag"
           placeholder={VALUE_PLACEHOLDER[d.filterType] ?? 'value'}
-          value={d.value ?? ''}
-          onChange={(e) => updateNodeData(id, { value: e.target.value })}
+          value={d.label ?? d.value ?? ''}
+          onChange={(e) => updateNodeData(id, { value: e.target.value, label: undefined })}
           onKeyDown={(e) => e.stopPropagation()}
         />
       )}

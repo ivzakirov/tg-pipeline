@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TelegramSessionEntity } from '../database/telegram-session.entity';
 import { SourceEntity } from '../database/source.entity';
+import { AvatarCacheEntity } from '../database/avatar-cache.entity';
+import { MediaCacheEntity } from '../database/media-cache.entity';
 import { CollectorService } from './collector.service';
 import { TelegramCryptoService } from './telegram-crypto.service';
 import { TelegramClientManager } from './telegram-client-manager.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TelegramSessionEntity, SourceEntity])],
+  imports: [TypeOrmModule.forFeature([TelegramSessionEntity, SourceEntity, AvatarCacheEntity, MediaCacheEntity])],
   providers: [TelegramCryptoService, TelegramClientManager, CollectorService],
   exports: [TelegramClientManager],
 })

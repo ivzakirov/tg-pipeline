@@ -11,7 +11,7 @@ import {
   type Edge, // eslint-disable-line @typescript-eslint/no-unused-vars
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import axios from 'axios';
+import api from './api';
 import SourceNode from './nodes/SourceNode';
 import FilterNode from './nodes/FilterNode';
 import OutputNode from './nodes/OutputNode';
@@ -19,15 +19,24 @@ import { graphToFilterConfig } from './utils/graphToFilterConfig';
 import { filterConfigToGraph } from './utils/filterConfigToGraph';
 import type { Pipeline, Source } from './types';
 
-function getToken(): string | null {
-  return (window as any).__TG_ACCESS_TOKEN__ ?? null;
-}
-
-const authHeaders = () => ({ Authorization: `Bearer ${getToken()}` });
 
 const nodeTypes = { source: SourceNode, filter: FilterNode, output: OutputNode };
 
+function useTheme(): 'light' | 'dark' {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    document.documentElement.classList.contains('dark') ? 'dark' : 'light',
+  );
+  useEffect(() => {
+    const handler = () =>
+      setTheme(document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    window.addEventListener('theme-change', handler);
+    return () => window.removeEventListener('theme-change', handler);
+  }, []);
+  return theme;
+}
+
 export default function App() {
+  const theme = useTheme();
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [activePipeline, setActivePipeline] = useState<Pipeline | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
@@ -35,13 +44,15 @@ export default function App() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [saving, setSaving] = useState(false);
   const [pipelineName, setPipelineName] = useState('');
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const [showAddSource, setShowAddSource] = useState(false);
   const [srcForm, setSrcForm] = useState({ name: '', telegramId: '', telegramUsername: '', type: 'channel' as 'channel' | 'group' });
   const [srcError, setSrcError] = useState('');
 
   useEffect(() => {
-    axios.get('/api/pipelines', { headers: authHeaders() }).then(({ data }) => setPipelines(data));
-    axios.get('/api/sources', { headers: authHeaders() }).then(({ data }) => setSources(data));
+    api.get('/api/pipelines').then(({ data }) => setPipelines(data));
+    api.get('/api/sources').then(({ data }) => setSources(data));
   }, []);
 
   const onConnect = useCallback(
@@ -80,16 +91,34 @@ export default function App() {
   const deleteSource = async (s: Source, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm(`Delete source "${s.name}"?`)) return;
-    await axios.delete(`/api/sources/${s.id}`, { headers: authHeaders() });
+    await api.delete(`/api/sources/${s.id}`);
     setSources((prev) => prev.filter((x) => x.id !== s.id));
     setNodes((nds) => nds.filter((n) => n.id !== `src-${s.id}`));
     setEdges((eds) => eds.filter((e) => e.source !== `src-${s.id}` && e.target !== `src-${s.id}`));
   };
 
+  const startRename = (p: Pipeline, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingId(p.id);
+    setRenameValue(p.name);
+  };
+
+  const commitRename = async (p: Pipeline) => {
+    const trimmed = renameValue.trim();
+    setRenamingId(null);
+    if (!trimmed || trimmed === p.name) return;
+    const { data } = await api.patch(`/api/pipelines/${p.id}`, { name: trimmed });
+    setPipelines((prev) => prev.map((x) => (x.id === data.id ? data : x)));
+    if (activePipeline?.id === p.id) {
+      setActivePipeline(data);
+      setPipelineName(data.name);
+    }
+  };
+
   const deletePipeline = async (p: Pipeline, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!confirm(`Delete pipeline "${p.name}"?`)) return;
-    await axios.delete(`/api/pipelines/${p.id}`, { headers: authHeaders() });
+    await api.delete(`/api/pipelines/${p.id}`);
     setPipelines((prev) => prev.filter((x) => x.id !== p.id));
     if (activePipeline?.id === p.id) newPipeline();
   };
@@ -134,12 +163,12 @@ export default function App() {
     const telegramId = parseInt(srcForm.telegramId, 10);
     if (isNaN(telegramId)) { setSrcError('Telegram ID must be a number'); return; }
     try {
-      const { data } = await axios.post('/api/sources', {
+      const { data } = await api.post('/api/sources', {
         name: srcForm.name,
         telegramId,
         telegramUsername: srcForm.telegramUsername || undefined,
         type: srcForm.type,
-      }, { headers: authHeaders() });
+      });
       setSources((prev) => [...prev, data]);
       setSrcForm({ name: '', telegramId: '', telegramUsername: '', type: 'channel' });
       setShowAddSource(false);
@@ -156,11 +185,11 @@ export default function App() {
     try {
       const payload = { name: pipelineName, filterConfig, sourceIds, enabled: true };
       if (activePipeline) {
-        const { data } = await axios.patch(`/api/pipelines/${activePipeline.id}`, payload, { headers: authHeaders() });
+        const { data } = await api.patch(`/api/pipelines/${activePipeline.id}`, payload);
         setPipelines((prev) => prev.map((p) => (p.id === data.id ? data : p)));
         setActivePipeline(data);
       } else {
-        const { data } = await axios.post('/api/pipelines', payload, { headers: authHeaders() });
+        const { data } = await api.post('/api/pipelines', payload);
         setPipelines((prev) => [...prev, data]);
         setActivePipeline(data);
       }
@@ -180,10 +209,30 @@ export default function App() {
         {pipelines.map((p) => (
           <div
             key={p.id}
-            style={{ ...styles.pipelineItem, background: activePipeline?.id === p.id ? '#e8f4fd' : 'transparent' }}
-            onClick={() => loadPipeline(p)}
+            style={{ ...styles.pipelineItem, background: activePipeline?.id === p.id ? 'var(--bg-active)' : 'transparent' }}
+            onClick={() => renamingId !== p.id && loadPipeline(p)}
           >
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            {renamingId === p.id ? (
+              <input
+                style={styles.renameInput}
+                value={renameValue}
+                autoFocus
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => commitRename(p)}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === 'Enter') commitRename(p);
+                  if (e.key === 'Escape') setRenamingId(null);
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span
+                style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                onDoubleClick={(e) => startRename(p, e)}
+                title="Double-click to rename"
+              >{p.name}</span>
+            )}
             <button
               style={styles.btnDelete}
               title="Delete pipeline"
@@ -217,6 +266,7 @@ export default function App() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           nodeTypes={nodeTypes}
+          colorMode={theme}
           fitView
         >
           <Background />
@@ -260,22 +310,23 @@ export default function App() {
 
 const styles: Record<string, React.CSSProperties> = {
   root: { display: 'flex', height: '100%' },
-  sidebar: { width: '200px', borderRight: '1px solid #e5e5e5', background: '#fff', display: 'flex', flexDirection: 'column' },
-  sidebarHeader: { display: 'flex', alignItems: 'center', padding: '12px', borderBottom: '1px solid #eee' },
-  sidebarTitle: { fontWeight: 700, fontSize: '13px', color: '#888', textTransform: 'uppercase', flex: 1 },
-  pipelineItem: { padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderRadius: '6px', margin: '2px 6px', display: 'flex', alignItems: 'center', gap: '4px' },
-  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', lineHeight: 1, color: '#bbb', padding: '0 2px', borderRadius: '3px', flexShrink: 0 },
+  sidebar: { width: '200px', borderRight: '1px solid var(--border-color)', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column' },
+  sidebarHeader: { display: 'flex', alignItems: 'center', padding: '12px', borderBottom: '1px solid var(--border-light)' },
+  sidebarTitle: { fontWeight: 700, fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', flex: 1 },
+  pipelineItem: { padding: '10px 14px', cursor: 'pointer', fontSize: '14px', borderRadius: '6px', margin: '2px 6px', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-primary)' },
+  btnDelete: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', lineHeight: 1, color: 'var(--text-muted)', padding: '0 2px', borderRadius: '3px', flexShrink: 0 },
+  renameInput: { flex: 1, padding: '2px 4px', fontSize: '14px', border: '1px solid #2AABEE', borderRadius: '4px', outline: 'none', minWidth: 0, background: 'var(--bg-input)', color: 'var(--text-primary)' },
   btnNew: { padding: '4px 10px', borderRadius: '6px', background: '#2AABEE', color: '#fff', border: 'none', cursor: 'pointer', fontSize: '12px' },
   canvas: { flex: 1, display: 'flex', flexDirection: 'column' },
-  toolbar: { display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid #eee', background: '#fff', alignItems: 'center', flexWrap: 'wrap' },
-  nameInput: { padding: '6px 10px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '14px', width: '180px' },
-  toolbarLabel: { fontSize: '12px', color: '#888' },
-  btnFilter: { padding: '4px 10px', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer', fontSize: '12px', background: '#fafafa' },
+  toolbar: { display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid var(--border-light)', background: 'var(--bg-primary)', alignItems: 'center', flexWrap: 'wrap' },
+  nameInput: { padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-input)', fontSize: '14px', width: '180px', background: 'var(--bg-input)', color: 'var(--text-primary)' },
+  toolbarLabel: { fontSize: '12px', color: 'var(--text-secondary)' },
+  btnFilter: { padding: '4px 10px', borderRadius: '6px', border: '1px solid var(--border-input)', cursor: 'pointer', fontSize: '12px', background: 'var(--bg-secondary)', color: 'var(--text-primary)' },
   btnSave: { marginLeft: 'auto', padding: '6px 16px', borderRadius: '6px', background: '#4caf50', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 },
-  sourcesPanel: { width: '180px', borderLeft: '1px solid #e5e5e5', background: '#fff', padding: '12px', overflow: 'auto' },
-  sourceItem: { display: 'flex', gap: '6px', padding: '8px', cursor: 'pointer', fontSize: '13px', borderRadius: '6px', margin: '2px 0' },
-  empty: { fontSize: '12px', color: '#aaa', marginTop: '8px' },
-  srcForm: { display: 'flex', flexDirection: 'column' as const, gap: '6px', marginBottom: '10px', padding: '8px', background: '#f8f9fa', borderRadius: '8px' },
-  srcInput: { padding: '6px 8px', borderRadius: '6px', border: '1px solid #ddd', fontSize: '12px', outline: 'none' },
+  sourcesPanel: { width: '180px', borderLeft: '1px solid var(--border-color)', background: 'var(--bg-primary)', padding: '12px', overflow: 'auto' },
+  sourceItem: { display: 'flex', gap: '6px', padding: '8px', cursor: 'pointer', fontSize: '13px', borderRadius: '6px', margin: '2px 0', color: 'var(--text-primary)' },
+  empty: { fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' },
+  srcForm: { display: 'flex', flexDirection: 'column' as const, gap: '6px', marginBottom: '10px', padding: '8px', background: 'var(--bg-secondary)', borderRadius: '8px' },
+  srcInput: { padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border-input)', fontSize: '12px', outline: 'none', background: 'var(--bg-input)', color: 'var(--text-primary)' },
   srcError: { color: '#e53935', fontSize: '11px', margin: 0 },
 };

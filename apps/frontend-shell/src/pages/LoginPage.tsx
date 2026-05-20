@@ -76,14 +76,14 @@ export default function LoginPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  container: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' },
-  card: { background: '#fff', padding: '40px', borderRadius: '12px', width: '360px', boxShadow: '0 4px 24px rgba(0,0,0,.08)' },
-  title: { fontSize: '24px', fontWeight: 700, marginBottom: '24px', textAlign: 'center' },
+  container: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-body)' },
+  card: { background: 'var(--bg-primary)', padding: '40px', borderRadius: '12px', width: '360px', boxShadow: '0 4px 24px var(--shadow-card)' },
+  title: { fontSize: '24px', fontWeight: 700, marginBottom: '24px', textAlign: 'center', color: 'var(--text-primary)' },
   form: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  input: { padding: '10px 14px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '15px', outline: 'none' },
-  rememberRow: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: '#555', cursor: 'pointer' },
+  input: { padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-input)', fontSize: '15px', outline: 'none', background: 'var(--bg-input)', color: 'var(--text-primary)' },
+  rememberRow: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' },
   button: { padding: '12px', borderRadius: '8px', background: '#2AABEE', color: '#fff', border: 'none', fontSize: '15px', fontWeight: 600, cursor: 'pointer' },
   error: { color: '#e53935', fontSize: '13px' },
-  footer: { marginTop: '16px', textAlign: 'center', fontSize: '14px', color: '#666' },
+  footer: { marginTop: '16px', textAlign: 'center', fontSize: '14px', color: 'var(--text-secondary)' },
   link: { color: '#2AABEE', textDecoration: 'none' },
 };
