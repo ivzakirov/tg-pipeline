@@ -191,6 +191,13 @@ export class TelegramClientManager implements OnModuleDestroy {
   }
 
   async stopClient(userId: string): Promise<void> {
+    const prefix = `${userId}:`;
+    for (const [key, entry] of this.pendingAlbums) {
+      if (key.startsWith(prefix)) {
+        clearTimeout(entry.timer);
+        this.pendingAlbums.delete(key);
+      }
+    }
     const interval = this.pollingIntervals.get(userId);
     if (interval) {
       clearInterval(interval);

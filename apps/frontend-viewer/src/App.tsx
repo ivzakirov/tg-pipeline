@@ -17,6 +17,7 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [highlightedTelegramMsgId, setHighlightedTelegramMsgId] = useState<number | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
+  const activePipelineIdRef = useRef<string | null>(null);
 
   const handleMessage = useCallback((msg: Message) => {
     if (msg.pipelineId === activePipelineId) {
@@ -33,7 +34,8 @@ export default function App() {
   }, []);
 
   const selectPipeline = async (pipelineId: string) => {
-    if (activePipelineId) unsubscribe(activePipelineId);
+    if (activePipelineIdRef.current) unsubscribe(activePipelineIdRef.current);
+    activePipelineIdRef.current = pipelineId;
     setActivePipelineId(pipelineId);
     setMessages([]);
     setLoading(true);
@@ -42,9 +44,13 @@ export default function App() {
 
     try {
       const { data } = await api.get(`/api/messages/${pipelineId}?limit=50`);
-      setMessages(data.reverse());
+      if (activePipelineIdRef.current === pipelineId) {
+        setMessages(data.reverse());
+      }
     } finally {
-      setLoading(false);
+      if (activePipelineIdRef.current === pipelineId) {
+        setLoading(false);
+      }
     }
   };
 

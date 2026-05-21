@@ -2,6 +2,7 @@ import { Body, Controller, Post, Req, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { IsEmail, IsString, MinLength } from 'class-validator';
 import { Request, Response } from 'express';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 
 class RegisterDto {
@@ -16,6 +17,7 @@ class LoginDto {
 
 @ApiTags('auth')
 @Controller('auth')
+@Throttle({ default: { ttl: 60_000, limit: 10 } })
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -47,7 +49,7 @@ export class AuthController {
       secure: process.env['NODE_ENV'] === 'production',
       sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: '/api/auth/refresh',
+      path: '/api/auth',
     });
   }
 }
