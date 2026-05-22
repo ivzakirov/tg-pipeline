@@ -17,6 +17,7 @@ export class TelegramClientManager implements OnModuleDestroy {
   private readonly logger = new Logger(TelegramClientManager.name);
   private readonly clients = new Map<string, TelegramClient>();
   private readonly pollingIntervals = new Map<string, ReturnType<typeof setInterval>>();
+  private readonly watchdogIntervals = new Map<string, ReturnType<typeof setInterval>>();
   private readonly avatarFetchInProgress = new Set<string>();
   private readonly pendingAlbums = new Map<string, { bestMsg: any; channelId: number; timer: ReturnType<typeof setTimeout> }>();
   private readonly apiId: number;
@@ -157,6 +158,22 @@ export class TelegramClientManager implements OnModuleDestroy {
 
       this.clients.set(userId, client);
       this.logger.log(`Client started for user ${userId}, watching ${sources.length} channels`);
+
+      const watchdog = setInterval(async () => {
+        const c = this.clients.get(userId);
+        if (!c) { clearInterval(watchdog); return; }
+        try {
+          await c.invoke(new Api.updates.GetState());
+        } catch (e: any) {
+          this.logger.warn(`Connection lost for user ${userId}: ${e.message} — reconnecting`);
+          clearInterval(watchdog);
+          this.watchdogIntervals.delete(userId);
+          this.refreshClientSources(userId).catch((err) =>
+            this.logger.error(`Reconnect failed for ${userId}: ${err.message}`)
+          );
+        }
+      }, 90_000);
+      this.watchdogIntervals.set(userId, watchdog);
     } catch (err) {
       this.logger.error(`Failed to start client for user ${userId}`, err);
     }
@@ -197,6 +214,11 @@ export class TelegramClientManager implements OnModuleDestroy {
         clearTimeout(entry.timer);
         this.pendingAlbums.delete(key);
       }
+    }
+    const watchdog = this.watchdogIntervals.get(userId);
+    if (watchdog) {
+      clearInterval(watchdog);
+      this.watchdogIntervals.delete(userId);
     }
     const interval = this.pollingIntervals.get(userId);
     if (interval) {

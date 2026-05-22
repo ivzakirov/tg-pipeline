@@ -14,16 +14,21 @@ export default function App() {
   const [activePipelineId, setActivePipelineId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [highlightedTelegramMsgId, setHighlightedTelegramMsgId] = useState<number | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const activePipelineIdRef = useRef<string | null>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const loadingMoreRef = useRef(false);
+  const prependCountRef = useRef(0);
 
   const handleMessage = useCallback((msg: Message) => {
     if (msg.pipelineId === activePipelineId) {
       // WebSocket sends messageId (Telegram ID); normalize to telegramMessageId
       const normalized: Message = { ...msg, telegramMessageId: msg.telegramMessageId ?? (msg as any).messageId };
-      setMessages((prev) => [normalized, ...prev]);
+      setMessages((prev) => [...prev, normalized]);
     }
   }, [activePipelineId]);
 
@@ -38,6 +43,9 @@ export default function App() {
     activePipelineIdRef.current = pipelineId;
     setActivePipelineId(pipelineId);
     setMessages([]);
+    setHasMore(false);
+    loadingMoreRef.current = false;
+    prependCountRef.current = 0;
     setLoading(true);
 
     subscribe(pipelineId);
@@ -45,12 +53,37 @@ export default function App() {
     try {
       const { data } = await api.get(`/api/messages/${pipelineId}?limit=50`);
       if (activePipelineIdRef.current === pipelineId) {
-        setMessages(data.reverse());
+        shouldAutoScrollRef.current = true;
+        setMessages((data as Message[]).reverse());
+        setHasMore(data.length >= 50);
       }
     } finally {
       if (activePipelineIdRef.current === pipelineId) {
         setLoading(false);
       }
+    }
+  };
+
+  const loadOlderMessages = async () => {
+    if (loadingMoreRef.current || !hasMore || !activePipelineIdRef.current) return;
+    const oldest = messages[0];
+    if (!oldest?.receivedAt) return;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    const pipelineId = activePipelineIdRef.current;
+    try {
+      const { data } = await api.get(
+        `/api/messages/${pipelineId}?limit=50&before=${encodeURIComponent(oldest.receivedAt)}`
+      );
+      if (activePipelineIdRef.current !== pipelineId) return;
+      if (data.length < 50) setHasMore(false);
+      if (data.length === 0) return;
+      const older = (data as Message[]).reverse();
+      prependCountRef.current = older.length;
+      setMessages((prev) => [...older, ...prev]);
+    } finally {
+      loadingMoreRef.current = false;
+      setLoadingMore(false);
     }
   };
 
@@ -92,6 +125,16 @@ export default function App() {
     overscan: 10,
   });
 
+  useEffect(() => {
+    if (prependCountRef.current > 0) {
+      const idx = prependCountRef.current;
+      prependCountRef.current = 0;
+      rowVirtualizer.scrollToIndex(idx, { align: 'start', behavior: 'auto' });
+    } else if (shouldAutoScrollRef.current && messages.length > 0) {
+      rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
+    }
+  }, [messages.length]);
+
   const handleReplyClick = (replyToMsgId: number) => {
     const targetId = Number(replyToMsgId);
     const idx = messages.findIndex((m) => Number(m.telegramMessageId) === targetId);
@@ -130,7 +173,19 @@ export default function App() {
           <div style={styles.placeholder}>Loading history...</div>
         )}
         {activePipelineId && !loading && (
-          <div ref={parentRef} style={styles.scrollArea}>
+          <div ref={parentRef} style={styles.scrollArea} onScroll={() => {
+              const el = parentRef.current;
+              if (!el) return;
+              shouldAutoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+              if (el.scrollTop < 200 && !loadingMoreRef.current && hasMore) {
+                loadOlderMessages();
+              }
+            }}>
+            {loadingMore && (
+              <div style={{ textAlign: 'center', padding: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                Loading older messages…
+              </div>
+            )}
             <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
               {rowVirtualizer.getVirtualItems().map((vi) => (
                 <div

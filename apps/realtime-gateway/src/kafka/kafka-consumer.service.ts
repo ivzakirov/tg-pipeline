@@ -19,7 +19,12 @@ export class KafkaConsumerService implements OnModuleInit, OnModuleDestroy {
       clientId: 'realtime-gateway-consumer',
       retry: { retries: 10, initialRetryTime: 500, maxRetryTime: 15000 },
     });
-    this.consumer = kafka.consumer({ groupId: 'realtime-gateway-group' });
+    this.consumer = kafka.consumer({
+      groupId: 'realtime-gateway-group',
+      sessionTimeout: 60000,
+      heartbeatInterval: 10000,
+      rebalanceTimeout: 120000,
+    });
   }
 
   async onModuleInit() {
