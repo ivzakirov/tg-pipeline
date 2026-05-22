@@ -23,7 +23,7 @@ export class MessagesController {
     return this.messagesService.findByPipeline(
       pipelineId,
       (req.user as any).id,
-      limit ? parseInt(limit, 10) : 50,
+      limit ? Math.min(parseInt(limit, 10), 200) : 50,
       before,
     );
   }

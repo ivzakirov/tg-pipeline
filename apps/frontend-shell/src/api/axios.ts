@@ -9,15 +9,27 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+let refreshPromise: Promise<string> | null = null;
+
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
     if (err.response?.status === 401 && !err.config._retry) {
       err.config._retry = true;
       try {
-        const { data } = await axios.post('/api/auth/refresh', {}, { withCredentials: true });
-        authStore.setToken(data.accessToken);
-        err.config.headers.Authorization = `Bearer ${data.accessToken}`;
+        if (!refreshPromise) {
+          refreshPromise = axios
+            .post('/api/auth/refresh', {}, { withCredentials: true })
+            .then(({ data }) => {
+              authStore.setToken(data.accessToken);
+              return data.accessToken as string;
+            })
+            .finally(() => {
+              refreshPromise = null;
+            });
+        }
+        const token = await refreshPromise;
+        err.config.headers.Authorization = `Bearer ${token}`;
         return api(err.config);
       } catch {
         authStore.clearToken();

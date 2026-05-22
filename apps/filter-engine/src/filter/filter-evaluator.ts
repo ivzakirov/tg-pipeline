@@ -35,7 +35,11 @@ function evaluateCondition(cond: FilterCondition, msg: RawTelegramMessage): bool
     }
     case 'regex': {
       const pattern = typeof cond.value === 'string' ? cond.value : '';
-      matches = new RegExp(pattern, 'i').test(msg.text);
+      try {
+        matches = new RegExp(pattern, 'i').test(msg.text);
+      } catch {
+        matches = false;
+      }
       break;
     }
     case 'sender': {

@@ -8,6 +8,8 @@ import { PipelineSourceEntity } from '../pipelines/pipeline-source.entity';
 import { MessageEntity } from '../messages/message.entity';
 import { TelegramSessionEntity } from '../telegram-auth/telegram-session.entity';
 import { RefreshTokenEntity } from '../auth/refresh-token.entity';
+import { AvatarCacheEntity } from '../avatars/avatar-cache.entity';
+import { MediaCacheEntity } from '../media/media-cache.entity';
 
 dotenv.config();
 
@@ -22,6 +24,8 @@ export const AppDataSource = new DataSource({
     MessageEntity,
     TelegramSessionEntity,
     RefreshTokenEntity,
+    AvatarCacheEntity,
+    MediaCacheEntity,
   ],
   migrations: ['src/database/migrations/*.ts'],
   synchronize: false,

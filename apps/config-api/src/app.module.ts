@@ -1,3 +1,4 @@
+import { join } from 'path';
 import { Module } from '@nestjs/common';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -43,7 +44,9 @@ import { MediaModule } from './media/media.module';
           AvatarCacheEntity,
           MediaCacheEntity,
         ],
-        synchronize: true,
+        synchronize: false,
+        migrations: [join(__dirname, 'database/migrations/*.js')],
+        migrationsRun: true,
       }),
     }),
     KafkaModule,
