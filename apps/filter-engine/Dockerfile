@@ -7,6 +7,7 @@ COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY packages/shared-types/package.json ./packages/shared-types/
 COPY packages/kafka-schemas/package.json ./packages/kafka-schemas/
 COPY packages/logger/package.json ./packages/logger/
+COPY packages/tracing/package.json ./packages/tracing/
 COPY apps/filter-engine/package.json ./apps/filter-engine/
 COPY pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --shamefully-hoist
@@ -17,6 +18,7 @@ COPY apps/filter-engine/ ./apps/filter-engine/
 RUN pnpm --filter @tg-pipeline/shared-types build
 RUN pnpm --filter @tg-pipeline/kafka-schemas build
 RUN pnpm --filter @tg-pipeline/logger build
+RUN pnpm --filter @tg-pipeline/tracing build
 RUN pnpm --filter @tg-pipeline/filter-engine build
 
 FROM node:20-alpine AS runner

@@ -1,4 +1,5 @@
 import pino from 'pino';
+import { trace } from '@opentelemetry/api';
 
 export interface LoggerOptions {
   service: string;
@@ -14,6 +15,12 @@ export function createLogger(options: LoggerOptions) {
       level(label) {
         return { level: label };
       },
+    },
+    mixin() {
+      const span = trace.getActiveSpan();
+      if (!span) return {};
+      const { traceId, spanId } = span.spanContext();
+      return { trace_id: traceId, span_id: spanId };
     },
   });
 }

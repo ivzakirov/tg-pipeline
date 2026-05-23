@@ -1,4 +1,7 @@
 import 'reflect-metadata';
+import { initTracing } from '@tg-pipeline/tracing';
+// Must run before AppModule (and its imports: TypeORM pg, KafkaJS) are loaded
+initTracing('config-api');
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';

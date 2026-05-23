@@ -1,4 +1,6 @@
 import 'reflect-metadata';
+import { initTracing } from '@tg-pipeline/tracing';
+initTracing('realtime-gateway');
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 

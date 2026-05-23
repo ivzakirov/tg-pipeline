@@ -26,7 +26,8 @@
     "rxjs": "^7.8.1",
     "@tg-pipeline/shared-types": "workspace:*",
     "@tg-pipeline/kafka-schemas": "workspace:*",
-    "@tg-pipeline/logger": "workspace:*"
+    "@tg-pipeline/logger": "workspace:*",
+    "@tg-pipeline/tracing": "workspace:*"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.4.9",
