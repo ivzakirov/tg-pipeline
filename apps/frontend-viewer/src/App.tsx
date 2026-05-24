@@ -32,7 +32,7 @@ export default function App() {
     }
   }, [activePipelineId]);
 
-  const { subscribe, unsubscribe } = useSocket(getToken(), handleMessage);
+  const { subscribe, unsubscribe, status } = useSocket(getToken(), handleMessage);
 
   useEffect(() => {
     api.get('/api/pipelines').then(({ data }) => setPipelines(data));
@@ -162,6 +162,10 @@ export default function App() {
         {pipelines.length === 0 && (
           <p style={styles.empty}>No pipelines yet.<br />Create one in Pipelines tab.</p>
         )}
+        <div style={styles.connectionStatus}>
+          <span style={styles.connectionDot(status)} />
+          {status === 'connected' ? 'Connected' : status === 'connecting' ? 'Connecting…' : 'Disconnected'}
+        </div>
       </div>
 
       {/* Message feed */}
@@ -230,6 +234,8 @@ const styles: Record<string, any> = {
   sidebarTitle: { padding: '16px', fontWeight: 700, fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' },
   sidebarItem: { padding: '12px 16px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px', margin: '2px 8px', color: 'var(--text-primary)' },
   pipelineDot: (enabled: boolean) => ({ width: 8, height: 8, borderRadius: '50%', background: enabled ? '#4caf50' : '#bbb', flexShrink: 0 }),
+  connectionStatus: { marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' },
+  connectionDot: (status: string) => ({ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: status === 'connected' ? '#4caf50' : status === 'connecting' ? '#ff9800' : '#f44336' }),
   empty: { padding: '16px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' as const, lineHeight: 1.6 },
   feed: { flex: 1, background: 'var(--bg-primary)', overflow: 'hidden', display: 'flex', flexDirection: 'column' },
   scrollArea: { flex: 1, overflowY: 'auto' as const },
