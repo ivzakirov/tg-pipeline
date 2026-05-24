@@ -38,18 +38,19 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
+    if (!refreshToken) throw new UnauthorizedException('No refresh token');
     const tokenHash = this.hashToken(refreshToken);
     return this.refreshTokenRepo.manager.transaction(async (manager) => {
       const stored = await manager.findOne(RefreshTokenEntity, {
         where: { tokenHash, revoked: false },
-        relations: ['user'],
         lock: { mode: 'pessimistic_write' },
       });
       if (!stored || stored.expiresAt < new Date()) {
         throw new UnauthorizedException('Invalid or expired refresh token');
       }
       await manager.update(RefreshTokenEntity, stored.id, { revoked: true });
-      return this.generateTokens(stored.user);
+      const user = await manager.findOneOrFail(UserEntity, { where: { id: stored.userId } });
+      return this.generateTokens(user);
     });
   }
 

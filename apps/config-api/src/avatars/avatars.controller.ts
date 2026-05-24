@@ -1,9 +1,11 @@
 import { Controller, Get, Param, Res } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Response } from 'express';
 import { AvatarCacheEntity } from './avatar-cache.entity';
 
+@SkipThrottle()
 @Controller('avatars')
 export class AvatarsController {
   constructor(

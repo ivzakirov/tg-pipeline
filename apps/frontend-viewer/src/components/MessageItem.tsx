@@ -1,10 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { Message } from '../types';
 
+const failedAvatarIds = new Set<number>();
+const failedMediaUrls = new Set<string>();
+
 interface Props {
   message: Message;
   onBlockSender?: (senderId: number, senderName: string) => void;
   onReplyClick?: (replyToMsgId: number) => void;
+  onImageClick?: (url: string) => void;
   highlighted?: boolean;
 }
 
@@ -13,11 +17,11 @@ function avatarColor(id: number): string {
   return colors[Math.abs(id) % colors.length];
 }
 
-export default function MessageItem({ message, onBlockSender, onReplyClick, highlighted }: Props) {
+export default function MessageItem({ message, onBlockSender, onReplyClick, onImageClick, highlighted }: Props) {
   const time = new Date(message.timestamp ?? message.receivedAt ?? '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
   // Use sender's own avatar when available; fall back to channel avatar for anonymous posts
   const avatarId = message.senderId !== 0 ? message.senderId : message.channelId;
-  const [imgFailed, setImgFailed] = useState(false);
+  const [imgFailed, setImgFailed] = useState(() => failedAvatarIds.has(avatarId));
   const [hovered, setHovered] = useState(false);
   const [blockHovered, setBlockHovered] = useState(false);
   const showImg = !imgFailed;
@@ -49,7 +53,7 @@ export default function MessageItem({ message, onBlockSender, onReplyClick, high
             src={`/api/avatars/${avatarId}`}
             alt=""
             style={styles.avatarImg}
-            onError={() => setImgFailed(true)}
+            onError={() => { failedAvatarIds.add(avatarId); setImgFailed(true); }}
           />
         ) : (
           <span style={styles.avatarLetter}>{message.senderName.charAt(0).toUpperCase()}</span>
@@ -88,12 +92,27 @@ export default function MessageItem({ message, onBlockSender, onReplyClick, high
             ? `/api/media/${message.channelId}/${message.telegramMessageId}`
             : null;
           if (mediaUrl && (mime.startsWith('image/') || message.mediaType === 'MessageMediaPhoto')) {
-            return <img src={mediaUrl} style={styles.mediaImg} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />;
+            if (failedMediaUrls.has(mediaUrl)) return null;
+            return (
+              <img
+                src={mediaUrl}
+                style={{ ...styles.mediaImg, cursor: onImageClick ? 'zoom-in' : 'default' }}
+                alt=""
+                onClick={onImageClick ? (e) => { e.stopPropagation(); onImageClick(mediaUrl); } : undefined}
+                onError={() => { failedMediaUrls.add(mediaUrl); }}
+              />
+            );
           }
           if (mediaUrl && mime.startsWith('video/')) {
+            if (failedMediaUrls.has(mediaUrl)) return <span style={styles.badge}>Video</span>;
             return (
               <div style={styles.videoThumb}>
-                <img src={mediaUrl} style={styles.mediaImg} alt="" onError={(e) => { (e.currentTarget as HTMLImageElement).parentElement!.style.display = 'none'; }} />
+                <img
+                  src={mediaUrl}
+                  style={styles.mediaImg}
+                  alt=""
+                  onError={() => { failedMediaUrls.add(mediaUrl); }}
+                />
                 <span style={styles.playIcon}>▶</span>
               </div>
             );

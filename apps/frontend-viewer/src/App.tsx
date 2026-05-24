@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import api from './api';
 import { useSocket } from './hooks/useSocket';
 import MessageItem from './components/MessageItem';
+import ImageViewer from './components/ImageViewer';
 import type { Message, Pipeline } from './types';
 
 function getToken(): string | null {
@@ -17,6 +18,7 @@ export default function App() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [highlightedTelegramMsgId, setHighlightedTelegramMsgId] = useState<number | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const activePipelineIdRef = useRef<string | null>(null);
@@ -118,6 +120,26 @@ export default function App() {
     }
   };
 
+  const imageUrls = useMemo(
+    () =>
+      messages
+        .filter(
+          (m) =>
+            m.telegramMessageId &&
+            (m.mediaMimeType?.startsWith('image/') || m.mediaType === 'MessageMediaPhoto'),
+        )
+        .map((m) => `/api/media/${m.channelId}/${m.telegramMessageId}`),
+    [messages],
+  );
+
+  const openLightbox = useCallback(
+    (url: string) => {
+      const idx = imageUrls.indexOf(url);
+      if (idx !== -1) setLightboxIndex(idx);
+    },
+    [imageUrls],
+  );
+
   const rowVirtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => parentRef.current,
@@ -202,6 +224,7 @@ export default function App() {
                     message={messages[vi.index]}
                     onBlockSender={blockSender}
                     onReplyClick={handleReplyClick}
+                    onImageClick={openLightbox}
                     highlighted={Number(messages[vi.index]?.telegramMessageId) === highlightedTelegramMsgId && highlightedTelegramMsgId !== null}
                   />
                 </div>
@@ -213,6 +236,16 @@ export default function App() {
           </div>
         )}
       </div>
+      {lightboxIndex !== null && imageUrls[lightboxIndex] && (
+        <ImageViewer
+          url={imageUrls[lightboxIndex]}
+          onClose={() => setLightboxIndex(null)}
+          hasPrev={lightboxIndex > 0}
+          hasNext={lightboxIndex < imageUrls.length - 1}
+          onPrev={() => setLightboxIndex((i) => (i !== null ? i - 1 : null))}
+          onNext={() => setLightboxIndex((i) => (i !== null ? i + 1 : null))}
+        />
+      )}
       {toast && (
         <div style={{
           position: 'fixed', bottom: '24px', right: '24px',
