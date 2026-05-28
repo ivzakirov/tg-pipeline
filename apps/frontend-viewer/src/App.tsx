@@ -19,6 +19,9 @@ export default function App() {
   const [hasMore, setHasMore] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [dateLabel, setDateLabel] = useState<string | null>(null);
+  const [dateLabelVisible, setDateLabelVisible] = useState(false);
+  const dateLabelTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [highlightedTelegramMsgId, setHighlightedTelegramMsgId] = useState<number | null>(null);
   const parentRef = useRef<HTMLDivElement>(null);
   const activePipelineIdRef = useRef<string | null>(null);
@@ -157,6 +160,18 @@ export default function App() {
     }
   }, [messages.length]);
 
+  const formatDateLabel = (dateStr: string): string => {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const toDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const diff = toDay(now) - toDay(d);
+    if (diff === 0) return 'Today';
+    if (diff === 86400000) return 'Yesterday';
+    const opts: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric' };
+    if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+    return d.toLocaleDateString('en-US', opts);
+  };
+
   const handleReplyClick = (replyToMsgId: number) => {
     const targetId = Number(replyToMsgId);
     const idx = messages.findIndex((m) => Number(m.telegramMessageId) === targetId);
@@ -191,7 +206,12 @@ export default function App() {
       </div>
 
       {/* Message feed */}
-      <div style={styles.feed}>
+      <div style={{ ...styles.feed, position: 'relative' }}>
+        {dateLabel && (
+          <div style={{ ...styles.datePill, opacity: dateLabelVisible ? 1 : 0 }}>
+            {dateLabel}
+          </div>
+        )}
         {!activePipelineId && (
           <div style={styles.placeholder}>Select a pipeline to view messages</div>
         )}
@@ -206,6 +226,14 @@ export default function App() {
               if (el.scrollTop < 200 && !loadingMoreRef.current && hasMore) {
                 loadOlderMessages();
               }
+              const firstVi = rowVirtualizer.getVirtualItems()[0];
+              if (firstVi != null && messages[firstVi.index]) {
+                const ts = messages[firstVi.index].timestamp ?? messages[firstVi.index].receivedAt;
+                if (ts) setDateLabel(formatDateLabel(ts));
+              }
+              setDateLabelVisible(true);
+              if (dateLabelTimeoutRef.current) clearTimeout(dateLabelTimeoutRef.current);
+              dateLabelTimeoutRef.current = setTimeout(() => setDateLabelVisible(false), 2000);
             }}>
             {loadingMore && (
               <div style={{ textAlign: 'center', padding: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -273,4 +301,5 @@ const styles: Record<string, any> = {
   feed: { flex: 1, background: 'var(--bg-primary)', overflow: 'hidden', display: 'flex', flexDirection: 'column' },
   scrollArea: { flex: 1, overflowY: 'auto' as const },
   placeholder: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center' as const },
+  datePill: { position: 'absolute' as const, top: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: '12px', fontWeight: 500, padding: '4px 12px', borderRadius: '12px', pointerEvents: 'none' as const, zIndex: 10, transition: 'opacity 0.3s ease', whiteSpace: 'nowrap' as const },
 };
