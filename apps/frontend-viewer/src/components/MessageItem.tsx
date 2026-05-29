@@ -19,7 +19,6 @@ function avatarColor(id: number): string {
 
 export default function MessageItem({ message, onBlockSender, onReplyClick, onImageClick, highlighted }: Props) {
   const time = new Date(message.timestamp ?? message.receivedAt ?? '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  // Use sender's own avatar when available; fall back to channel avatar for anonymous posts
   const avatarId = message.senderId !== 0 ? message.senderId : message.channelId;
   const [imgFailed, setImgFailed] = useState(() => failedAvatarIds.has(avatarId));
   const [hovered, setHovered] = useState(false);
@@ -33,7 +32,7 @@ export default function MessageItem({ message, onBlockSender, onReplyClick, onIm
   useEffect(() => {
     if (highlighted && !prevHighlighted.current) {
       setTransition('none');
-      setBgColor('var(--bg-highlight)');
+      setBgColor('var(--tg-highlight, #e3f2fd)');
     } else if (!highlighted && prevHighlighted.current) {
       setTransition('background-color 1.5s ease');
       setBgColor(undefined);
@@ -43,49 +42,70 @@ export default function MessageItem({ message, onBlockSender, onReplyClick, onIm
 
   return (
     <div
-      style={{ ...styles.wrapper, backgroundColor: bgColor, transition }}
+      className="flex gap-3 px-4 py-2.5 border-b border-tg-border-light dark:border-tg-border-light-dark"
+      style={{ backgroundColor: bgColor, transition }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); setBlockHovered(false); }}
     >
-      <div style={{ ...styles.avatarWrap, background: avatarColor(avatarId) }}>
+      <div
+        className="w-[38px] h-[38px] rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center"
+        style={{ background: avatarColor(avatarId) }}
+      >
         {showImg ? (
           <img
             src={`/api/avatars/${avatarId}`}
             alt=""
-            style={styles.avatarImg}
+            className="w-full h-full object-cover block"
             onError={() => { failedAvatarIds.add(avatarId); setImgFailed(true); }}
           />
         ) : (
-          <span style={styles.avatarLetter}>{message.senderName.charAt(0).toUpperCase()}</span>
+          <span className="text-white font-bold text-base">{message.senderName.charAt(0).toUpperCase()}</span>
         )}
       </div>
-      <div style={styles.body}>
-        <div style={styles.header}>
-          <span style={styles.sender}>{message.senderName}</span>
-            {onBlockSender && (
-              <span
-                style={{ ...styles.blockBtn, opacity: hovered ? 1 : 0, pointerEvents: hovered ? 'auto' : 'none', background: blockHovered ? '#ffd0d0' : '#eee', color: blockHovered ? '#c00' : '#999' }}
-                title={`Block ${message.senderName}`}
-                onMouseEnter={() => setBlockHovered(true)}
-                onMouseLeave={() => setBlockHovered(false)}
-                onClick={(e) => { e.stopPropagation(); onBlockSender(message.senderId, message.senderName); }}
-              >✕</span>
-            )}
-          <span style={styles.time}>{time}</span>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex gap-2 items-baseline mb-1">
+          <span className="font-semibold text-sm text-tg-text dark:text-tg-text-dark">{message.senderName}</span>
+          {onBlockSender && (
+            <span
+              className="inline-flex items-center justify-center w-4 h-4 rounded-full text-[10px] cursor-pointer select-none transition-colors duration-100"
+              style={{
+                opacity: hovered ? 1 : 0,
+                pointerEvents: hovered ? 'auto' : 'none',
+                background: blockHovered ? '#ffd0d0' : '#eee',
+                color: blockHovered ? '#c00' : '#999',
+              }}
+              title={`Block ${message.senderName}`}
+              onMouseEnter={() => setBlockHovered(true)}
+              onMouseLeave={() => setBlockHovered(false)}
+              onClick={(e) => { e.stopPropagation(); onBlockSender(message.senderId, message.senderName); }}
+            >✕</span>
+          )}
+          <span className="ml-auto text-[11px] text-tg-text-muted dark:text-tg-text-muted-dark">{time}</span>
         </div>
+
         {message.replyToMsgId && (
           <div
-            style={{ ...styles.replyBlock, cursor: onReplyClick ? 'pointer' : 'default' }}
+            className="flex gap-1.5 mb-[5px]"
+            style={{ cursor: onReplyClick ? 'pointer' : 'default' }}
             onClick={() => onReplyClick?.(message.replyToMsgId!)}
           >
-            <div style={styles.replyBar} />
-            <div style={styles.replyContent}>
-              <span style={styles.replyAuthor}>{message.replyToSenderName ?? 'Unknown'}</span>
-              <span style={styles.replyText}>{message.replyToText ?? '[media]'}</span>
+            <div className="w-[3px] rounded-sm bg-tg-blue flex-shrink-0" />
+            <div className="bg-tg-reply dark:bg-tg-reply-dark rounded px-2 py-[3px] min-w-0 overflow-hidden">
+              <span className="block text-[11px] font-semibold text-tg-blue whitespace-nowrap overflow-hidden text-ellipsis">
+                {message.replyToSenderName ?? 'Unknown'}
+              </span>
+              <span className="block text-[11px] text-tg-text-sub dark:text-tg-text-sub-dark whitespace-nowrap overflow-hidden text-ellipsis">
+                {message.replyToText ?? '[media]'}
+              </span>
             </div>
           </div>
         )}
-        <p style={styles.text}>{message.text || <em style={{ color: '#999' }}>[media]</em>}</p>
+
+        <p className="text-sm text-tg-text dark:text-tg-text-dark break-words leading-[1.5] m-0">
+          {message.text || <em className="text-[#999]">[media]</em>}
+        </p>
+
         {message.mediaType && (() => {
           const mime = message.mediaMimeType ?? '';
           const mediaUrl = message.telegramMessageId
@@ -96,7 +116,8 @@ export default function MessageItem({ message, onBlockSender, onReplyClick, onIm
             return (
               <img
                 src={mediaUrl}
-                style={{ ...styles.mediaImg, cursor: onImageClick ? 'zoom-in' : 'default' }}
+                className="block max-w-[300px] max-h-[400px] rounded-lg mt-1.5 object-cover"
+                style={{ cursor: onImageClick ? 'zoom-in' : 'default' }}
                 alt=""
                 onClick={onImageClick ? (e) => { e.stopPropagation(); onImageClick(mediaUrl); } : undefined}
                 onError={() => { failedMediaUrls.add(mediaUrl); }}
@@ -104,48 +125,29 @@ export default function MessageItem({ message, onBlockSender, onReplyClick, onIm
             );
           }
           if (mediaUrl && mime.startsWith('video/')) {
-            if (failedMediaUrls.has(mediaUrl)) return <span style={styles.badge}>Video</span>;
+            if (failedMediaUrls.has(mediaUrl)) return <span className="inline-block mt-1 px-2 py-0.5 rounded bg-tg-badge-bg dark:bg-tg-badge-bg-dark text-[11px] text-tg-text-badge dark:text-tg-text-badge-dark">Video</span>;
             return (
-              <div style={styles.videoThumb}>
+              <div className="relative inline-block mt-1.5">
                 <img
                   src={mediaUrl}
-                  style={styles.mediaImg}
+                  className="block max-w-[300px] max-h-[400px] rounded-lg object-cover"
                   alt=""
                   onError={() => { failedMediaUrls.add(mediaUrl); }}
                 />
-                <span style={styles.playIcon}>▶</span>
+                <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[28px] text-white pointer-events-none [text-shadow:0_1px_4px_rgba(0,0,0,0.6)]">▶</span>
               </div>
             );
           }
           if (mediaUrl && mime.startsWith('audio/')) {
-            return <audio controls src={mediaUrl} style={styles.audio} />;
+            return <audio controls src={mediaUrl} className="block mt-1.5 w-[280px]" />;
           }
-          return <span style={styles.badge}>{message.mediaType.replace('MessageMedia', '')}</span>;
+          return (
+            <span className="inline-block mt-1 px-2 py-0.5 rounded bg-tg-badge-bg dark:bg-tg-badge-bg-dark text-[11px] text-tg-text-badge dark:text-tg-text-badge-dark">
+              {message.mediaType.replace('MessageMedia', '')}
+            </span>
+          );
         })()}
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  wrapper: { display: 'flex', gap: '12px', padding: '10px 16px', borderBottom: '1px solid var(--border-light)' },
-  avatarWrap: { width: '38px', height: '38px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  avatarImg: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
-  avatarLetter: { color: '#fff', fontWeight: 700, fontSize: '16px' },
-  body: { flex: 1, minWidth: 0 },
-  header: { display: 'flex', gap: '8px', alignItems: 'baseline', marginBottom: '4px' },
-  sender: { fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' },
-  time: { marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' },
-  text: { fontSize: '14px', color: 'var(--text-primary)', wordBreak: 'break-word', lineHeight: 1.5, margin: 0 },
-  badge: { display: 'inline-block', marginTop: '4px', padding: '2px 8px', borderRadius: '4px', background: 'var(--bg-badge)', fontSize: '11px', color: 'var(--text-badge)' },
-  mediaImg: { display: 'block', maxWidth: '300px', maxHeight: '400px', borderRadius: '8px', marginTop: '6px', objectFit: 'cover' as const },
-  videoThumb: { position: 'relative' as const, display: 'inline-block', marginTop: '6px' },
-  playIcon: { position: 'absolute' as const, top: '50%', left: '50%', transform: 'translate(-50%,-50%)', fontSize: '28px', color: '#fff', textShadow: '0 1px 4px rgba(0,0,0,.6)', pointerEvents: 'none' as const },
-  audio: { display: 'block', marginTop: '6px', width: '280px' },
-  replyBlock: { display: 'flex', gap: '6px', marginBottom: '5px', cursor: 'default' },
-  replyBar: { width: '3px', borderRadius: '2px', background: '#2AABEE', flexShrink: 0 },
-  replyContent: { background: 'var(--bg-reply)', borderRadius: '4px', padding: '3px 8px', minWidth: 0, overflow: 'hidden' },
-  replyAuthor: { display: 'block', fontSize: '11px', fontWeight: 600, color: '#2AABEE', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
-  replyText: { display: 'block', fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' },
-  blockBtn: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '16px', height: '16px', borderRadius: '50%', fontSize: '10px', cursor: 'pointer', userSelect: 'none' as const, transition: 'background 0.1s' },
-};

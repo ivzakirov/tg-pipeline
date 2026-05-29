@@ -20,12 +20,8 @@ export default function TelegramAuthWidget() {
 
   useEffect(() => {
     api.get('/telegram-auth/status').then(({ data }) => {
-      if (data.connected) {
-        setStatus('connected');
-        setPhone(data.phone ?? null);
-      } else {
-        setStatus('disconnected');
-      }
+      if (data.connected) { setStatus('connected'); setPhone(data.phone ?? null); }
+      else setStatus('disconnected');
     }).catch(() => setStatus('disconnected'));
   }, []);
 
@@ -35,7 +31,10 @@ export default function TelegramAuthWidget() {
     return () => document.removeEventListener('keydown', onKey);
   }, []);
 
-  const reset = () => { setStep('idle'); setPhoneInput(''); setCodeInput(''); setPasswordInput(''); setPhoneCodeHash(''); setError(''); };
+  const reset = () => {
+    setStep('idle'); setPhoneInput(''); setCodeInput('');
+    setPasswordInput(''); setPhoneCodeHash(''); setError('');
+  };
 
   const sendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,11 +56,8 @@ export default function TelegramAuthWidget() {
       setStatus('connected'); setPhone(phoneInput); reset();
     } catch (err: any) {
       const msg = err.response?.data?.message ?? '';
-      if (msg.includes('2FA') || msg.includes('password')) {
-        setStep('2fa');
-      } else {
-        setError(msg || 'Invalid code');
-      }
+      if (msg.includes('2FA') || msg.includes('password')) setStep('2fa');
+      else setError(msg || 'Invalid code');
     } finally { setBusy(false); }
   };
 
@@ -85,70 +81,93 @@ export default function TelegramAuthWidget() {
     } finally { setBusy(false); }
   };
 
+  const inputClass = 'px-3 py-2 rounded-lg border border-[#ddd] text-sm outline-none w-full';
+  const btnPrimaryClass = 'w-full py-2.5 rounded-lg bg-tg-blue text-white border-none cursor-pointer font-semibold text-sm disabled:opacity-60';
+
   return (
-    <div style={{ position: 'relative' }} ref={panelRef}>
+    <div className="relative" ref={panelRef}>
       {status === 'loading' && (
-        <span style={styles.badge('gray')}>Telegram…</span>
+        <span className="text-xs px-2.5 py-1 rounded-xl bg-[#333] text-[#888] whitespace-nowrap">Telegram…</span>
       )}
       {status === 'connected' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={styles.badge('green')}>✓ {phone ?? 'Telegram'}</span>
-          <button style={styles.btnSmall} onClick={disconnect} disabled={busy}>Disconnect</button>
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-2.5 py-1 rounded-xl bg-[#1a3a1a] text-[#4caf50] whitespace-nowrap">✓ {phone ?? 'Telegram'}</span>
+          <button
+            className="text-xs px-2.5 py-1 rounded-lg bg-transparent border border-[#555] text-[#aaa] cursor-pointer"
+            onClick={disconnect}
+            disabled={busy}
+          >
+            Disconnect
+          </button>
         </div>
       )}
       {status === 'disconnected' && step === 'idle' && (
-        <button style={styles.btnConnect} onClick={() => setStep('phone')}>Connect Telegram</button>
+        <button
+          className="px-3.5 py-1.5 rounded-md bg-tg-blue text-white border-none cursor-pointer text-sm font-semibold"
+          onClick={() => setStep('phone')}
+        >
+          Connect Telegram
+        </button>
       )}
 
       {step !== 'idle' && (
-        <div style={styles.panel}>
-          <button style={styles.close} onClick={reset}>×</button>
+        <div className="absolute top-[calc(100%+10px)] right-0 z-[1000] bg-white rounded-xl p-5 shadow-overlay w-[280px]">
+          <button
+            className="absolute top-2.5 right-3 bg-transparent border-none cursor-pointer text-[18px] text-[#aaa] leading-none"
+            onClick={reset}
+          >×</button>
 
           {step === 'phone' && (
-            <form onSubmit={sendCode} style={styles.form}>
-              <div style={styles.title}>Connect Telegram</div>
-              <div style={styles.hint}>Enter your phone number with country code</div>
+            <form onSubmit={sendCode} className="flex flex-col gap-2.5">
+              <div className="font-bold text-[15px] text-[#1c2733]">Connect Telegram</div>
+              <div className="text-xs text-[#888]">Enter your phone number with country code</div>
               <input
-                style={styles.input}
+                className={inputClass}
                 placeholder="+79001234567"
                 value={phoneInput}
                 onChange={(e) => setPhoneInput(e.target.value)}
                 autoFocus
                 required
               />
-              {error && <div style={styles.error}>{error}</div>}
-              <button style={styles.btnPrimary} type="submit" disabled={busy}>
+              {error && <div className="text-[#e53935] text-xs">{error}</div>}
+              <button className={btnPrimaryClass} type="submit" disabled={busy}>
                 {busy ? 'Sending…' : 'Send code'}
               </button>
             </form>
           )}
 
           {step === 'code' && (
-            <form onSubmit={verifyCode} style={styles.form}>
-              <div style={styles.title}>Enter code</div>
-              <div style={styles.hint}>Code sent to {phoneInput}</div>
+            <form onSubmit={verifyCode} className="flex flex-col gap-2.5">
+              <div className="font-bold text-[15px] text-[#1c2733]">Enter code</div>
+              <div className="text-xs text-[#888]">Code sent to {phoneInput}</div>
               <input
-                style={styles.input}
+                className={inputClass}
                 placeholder="12345"
                 value={codeInput}
                 onChange={(e) => setCodeInput(e.target.value)}
                 autoFocus
                 required
               />
-              {error && <div style={styles.error}>{error}</div>}
-              <button style={styles.btnPrimary} type="submit" disabled={busy}>
+              {error && <div className="text-[#e53935] text-xs">{error}</div>}
+              <button className={btnPrimaryClass} type="submit" disabled={busy}>
                 {busy ? 'Verifying…' : 'Confirm'}
               </button>
-              <button type="button" style={styles.btnBack} onClick={() => setStep('phone')}>← Back</button>
+              <button
+                type="button"
+                className="bg-transparent border-none text-[#888] cursor-pointer text-sm text-center"
+                onClick={() => setStep('phone')}
+              >
+                ← Back
+              </button>
             </form>
           )}
 
           {step === '2fa' && (
-            <form onSubmit={verify2fa} style={styles.form}>
-              <div style={styles.title}>Two-step verification</div>
-              <div style={styles.hint}>Enter your cloud password</div>
+            <form onSubmit={verify2fa} className="flex flex-col gap-2.5">
+              <div className="font-bold text-[15px] text-[#1c2733]">Two-step verification</div>
+              <div className="text-xs text-[#888]">Enter your cloud password</div>
               <input
-                style={styles.input}
+                className={inputClass}
                 type="password"
                 placeholder="Password"
                 value={passwordInput}
@@ -156,8 +175,8 @@ export default function TelegramAuthWidget() {
                 autoFocus
                 required
               />
-              {error && <div style={styles.error}>{error}</div>}
-              <button style={styles.btnPrimary} type="submit" disabled={busy}>
+              {error && <div className="text-[#e53935] text-xs">{error}</div>}
+              <button className={btnPrimaryClass} type="submit" disabled={busy}>
                 {busy ? 'Verifying…' : 'Confirm'}
               </button>
             </form>
@@ -167,48 +186,3 @@ export default function TelegramAuthWidget() {
     </div>
   );
 }
-
-const styles = {
-  badge: (color: 'green' | 'gray'): React.CSSProperties => ({
-    fontSize: '12px',
-    padding: '3px 10px',
-    borderRadius: '12px',
-    background: color === 'green' ? '#1a3a1a' : '#333',
-    color: color === 'green' ? '#4caf50' : '#888',
-    whiteSpace: 'nowrap',
-  }),
-  btnConnect: {
-    padding: '6px 14px', borderRadius: '6px', background: '#2AABEE',
-    color: '#fff', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600,
-  } as React.CSSProperties,
-  btnSmall: {
-    padding: '3px 10px', borderRadius: '6px', background: 'none',
-    border: '1px solid #555', color: '#aaa', cursor: 'pointer', fontSize: '12px',
-  } as React.CSSProperties,
-  panel: {
-    position: 'absolute', top: 'calc(100% + 10px)', right: 0, zIndex: 1000,
-    background: '#fff', borderRadius: '10px', padding: '20px',
-    boxShadow: '0 8px 32px rgba(0,0,0,.18)', width: '280px',
-  } as React.CSSProperties,
-  close: {
-    position: 'absolute', top: '10px', right: '12px',
-    background: 'none', border: 'none', cursor: 'pointer',
-    fontSize: '18px', color: '#aaa', lineHeight: 1,
-  } as React.CSSProperties,
-  form: { display: 'flex', flexDirection: 'column', gap: '10px' } as React.CSSProperties,
-  title: { fontWeight: 700, fontSize: '15px', color: '#1c2733' },
-  hint: { fontSize: '12px', color: '#888', marginTop: '-4px' },
-  input: {
-    padding: '9px 12px', borderRadius: '7px', border: '1px solid #ddd',
-    fontSize: '14px', outline: 'none',
-  } as React.CSSProperties,
-  btnPrimary: {
-    padding: '10px', borderRadius: '7px', background: '#2AABEE',
-    color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '14px',
-  } as React.CSSProperties,
-  btnBack: {
-    background: 'none', border: 'none', color: '#888', cursor: 'pointer',
-    fontSize: '13px', textAlign: 'center',
-  } as React.CSSProperties,
-  error: { color: '#e53935', fontSize: '12px' },
-};

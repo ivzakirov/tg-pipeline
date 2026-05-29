@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+:root { --tg-highlight: #e3f2fd; }
+html.dark { --tg-highlight: #1e3a5f; }
+
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
@@ -17,8 +20,3 @@ html.dark ::-webkit-scrollbar-thumb:hover { background: #3e5570; }
 /* Scrollbar — Firefox */
 * { scrollbar-width: thin; scrollbar-color: #c8cdd2 transparent; }
 html.dark * { scrollbar-color: #2e4055 transparent; }
-
-/* React Flow dark overrides */
-html.dark .react-flow { background: #17212b; }
-html.dark .react-flow__background { background: #17212b; }
-html.dark .react-flow__background pattern { color: #2a3a4a; }

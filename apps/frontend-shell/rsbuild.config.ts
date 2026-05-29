@@ -5,6 +5,11 @@ import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
 export default defineConfig({
   plugins: [pluginReact()],
   tools: {
+    postcss: {
+      postcssOptions: {
+        plugins: [require('tailwindcss'), require('autoprefixer')],
+      },
+    },
     rspack: {
       plugins: [
         new ModuleFederationPlugin({

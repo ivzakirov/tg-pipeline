@@ -5,7 +5,6 @@ import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
-// Lazy-load remote MFEs
 const ViewerApp = lazy(() => import('viewer/App'));
 const PipelineApp = lazy(() => import('pipeline/App'));
 
@@ -25,7 +24,7 @@ export default function App() {
           <Route
             path="/"
             element={
-              <Suspense fallback={<div style={{ padding: 24 }}>Loading viewer...</div>}>
+              <Suspense fallback={<div className="p-6 text-tg-text-muted dark:text-tg-text-muted-dark">Loading viewer...</div>}>
                 <ViewerApp />
               </Suspense>
             }
@@ -33,7 +32,7 @@ export default function App() {
           <Route
             path="/pipelines/*"
             element={
-              <Suspense fallback={<div style={{ padding: 24 }}>Loading pipelines...</div>}>
+              <Suspense fallback={<div className="p-6 text-tg-text-muted dark:text-tg-text-muted-dark">Loading pipelines...</div>}>
                 <PipelineApp />
               </Suspense>
             }

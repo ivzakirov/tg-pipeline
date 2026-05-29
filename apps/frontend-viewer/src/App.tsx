@@ -1,8 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import './index.css';
 import api from './api';
 import { useSocket } from './hooks/useSocket';
-import MessageItem from './components/MessageItem';
+import { useToast } from './hooks/useToast';
+import { useLightbox } from './hooks/useLightbox';
+import Sidebar from './components/Sidebar';
+import MessageFeed from './components/MessageFeed';
 import ImageViewer from './components/ImageViewer';
 import type { Message, Pipeline } from './types';
 
@@ -17,21 +20,18 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const [dateLabel, setDateLabel] = useState<string | null>(null);
-  const [dateLabelVisible, setDateLabelVisible] = useState(false);
-  const dateLabelTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [highlightedTelegramMsgId, setHighlightedTelegramMsgId] = useState<number | null>(null);
-  const parentRef = useRef<HTMLDivElement>(null);
+
   const activePipelineIdRef = useRef<string | null>(null);
   const shouldAutoScrollRef = useRef(true);
   const loadingMoreRef = useRef(false);
   const prependCountRef = useRef(0);
 
+  const { toast, showToast } = useToast();
+  const { lightboxIndex, setLightboxIndex, imageUrls, openLightbox } = useLightbox(messages);
+
   const handleMessage = useCallback((msg: Message) => {
     if (msg.pipelineId === activePipelineId) {
-      // WebSocket sends messageId (Telegram ID); normalize to telegramMessageId
       const normalized: Message = { ...msg, telegramMessageId: msg.telegramMessageId ?? (msg as any).messageId };
       setMessages((prev) => [...prev, normalized]);
     }
@@ -52,9 +52,7 @@ export default function App() {
     loadingMoreRef.current = false;
     prependCountRef.current = 0;
     setLoading(true);
-
     subscribe(pipelineId);
-
     try {
       const { data } = await api.get(`/api/messages/${pipelineId}?limit=50`);
       if (activePipelineIdRef.current === pipelineId) {
@@ -63,9 +61,7 @@ export default function App() {
         setHasMore(data.length >= 50);
       }
     } finally {
-      if (activePipelineIdRef.current === pipelineId) {
-        setLoading(false);
-      }
+      if (activePipelineIdRef.current === pipelineId) setLoading(false);
     }
   };
 
@@ -78,7 +74,7 @@ export default function App() {
     const pipelineId = activePipelineIdRef.current;
     try {
       const { data } = await api.get(
-        `/api/messages/${pipelineId}?limit=50&before=${encodeURIComponent(oldest.receivedAt)}`
+        `/api/messages/${pipelineId}?limit=50&before=${encodeURIComponent(oldest.receivedAt)}`,
       );
       if (activePipelineIdRef.current !== pipelineId) return;
       if (data.length < 50) setHasMore(false);
@@ -90,11 +86,6 @@ export default function App() {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  };
-
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
   };
 
   const blockSender = async (senderId: number, senderName: string) => {
@@ -123,147 +114,34 @@ export default function App() {
     }
   };
 
-  const imageUrls = useMemo(
-    () =>
-      messages
-        .filter(
-          (m) =>
-            m.telegramMessageId &&
-            (m.mediaMimeType?.startsWith('image/') || m.mediaType === 'MessageMediaPhoto'),
-        )
-        .map((m) => `/api/media/${m.channelId}/${m.telegramMessageId}`),
-    [messages],
-  );
-
-  const openLightbox = useCallback(
-    (url: string) => {
-      const idx = imageUrls.indexOf(url);
-      if (idx !== -1) setLightboxIndex(idx);
-    },
-    [imageUrls],
-  );
-
-  const rowVirtualizer = useVirtualizer({
-    count: messages.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 80,
-    overscan: 10,
-  });
-
-  useEffect(() => {
-    if (prependCountRef.current > 0) {
-      const idx = prependCountRef.current;
-      prependCountRef.current = 0;
-      rowVirtualizer.scrollToIndex(idx, { align: 'start', behavior: 'auto' });
-    } else if (shouldAutoScrollRef.current && messages.length > 0) {
-      rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
-    }
-  }, [messages.length]);
-
-  const formatDateLabel = (dateStr: string): string => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const toDay = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-    const diff = toDay(now) - toDay(d);
-    if (diff === 0) return 'Today';
-    if (diff === 86400000) return 'Yesterday';
-    const opts: Intl.DateTimeFormatOptions = { month: 'long', day: 'numeric' };
-    if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
-    return d.toLocaleDateString('en-US', opts);
-  };
-
-  const handleReplyClick = (replyToMsgId: number) => {
-    const targetId = Number(replyToMsgId);
-    const idx = messages.findIndex((m) => Number(m.telegramMessageId) === targetId);
-    if (idx === -1) return;
-    rowVirtualizer.scrollToIndex(idx, { behavior: 'smooth', align: 'center' });
-    setHighlightedTelegramMsgId(targetId);
+  const handleReplyHighlight = useCallback((replyToMsgId: number) => {
+    setHighlightedTelegramMsgId(replyToMsgId);
     setTimeout(() => setHighlightedTelegramMsgId(null), 2000);
-  };
+  }, []);
 
   return (
-    <div style={styles.root}>
-      {/* Sidebar */}
-      <div style={styles.sidebar}>
-        <div style={styles.sidebarTitle}>Pipelines</div>
-        {pipelines.map((p) => (
-          <div
-            key={p.id}
-            style={{ ...styles.sidebarItem, background: p.id === activePipelineId ? 'var(--bg-active)' : 'transparent' }}
-            onClick={() => selectPipeline(p.id)}
-          >
-            <span style={styles.pipelineDot(p.enabled)} />
-            {p.name}
-          </div>
-        ))}
-        {pipelines.length === 0 && (
-          <p style={styles.empty}>No pipelines yet.<br />Create one in Pipelines tab.</p>
-        )}
-        <div style={styles.connectionStatus}>
-          <span style={styles.connectionDot(status)} />
-          {status === 'connected' ? 'Connected' : status === 'connecting' ? 'Connecting…' : 'Disconnected'}
-        </div>
-      </div>
-
-      {/* Message feed */}
-      <div style={{ ...styles.feed, position: 'relative' }}>
-        {dateLabel && (
-          <div style={{ ...styles.datePill, opacity: dateLabelVisible ? 1 : 0 }}>
-            {dateLabel}
-          </div>
-        )}
-        {!activePipelineId && (
-          <div style={styles.placeholder}>Select a pipeline to view messages</div>
-        )}
-        {activePipelineId && loading && (
-          <div style={styles.placeholder}>Loading history...</div>
-        )}
-        {activePipelineId && !loading && (
-          <div ref={parentRef} style={styles.scrollArea} onScroll={() => {
-              const el = parentRef.current;
-              if (!el) return;
-              shouldAutoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
-              if (el.scrollTop < 200 && !loadingMoreRef.current && hasMore) {
-                loadOlderMessages();
-              }
-              const firstVi = rowVirtualizer.getVirtualItems()[0];
-              if (firstVi != null && messages[firstVi.index]) {
-                const ts = messages[firstVi.index].timestamp ?? messages[firstVi.index].receivedAt;
-                if (ts) setDateLabel(formatDateLabel(ts));
-              }
-              setDateLabelVisible(true);
-              if (dateLabelTimeoutRef.current) clearTimeout(dateLabelTimeoutRef.current);
-              dateLabelTimeoutRef.current = setTimeout(() => setDateLabelVisible(false), 2000);
-            }}>
-            {loadingMore && (
-              <div style={{ textAlign: 'center', padding: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                Loading older messages…
-              </div>
-            )}
-            <div style={{ height: rowVirtualizer.getTotalSize(), position: 'relative' }}>
-              {rowVirtualizer.getVirtualItems().map((vi) => (
-                <div
-                  key={vi.index}
-                  style={{ position: 'absolute', top: vi.start, left: 0, right: 0 }}
-                  ref={rowVirtualizer.measureElement}
-                  data-index={vi.index}
-                >
-                  <MessageItem
-                    message={messages[vi.index]}
-                    onBlockSender={blockSender}
-                    onReplyClick={handleReplyClick}
-                    onImageClick={openLightbox}
-                    highlighted={Number(messages[vi.index]?.telegramMessageId) === highlightedTelegramMsgId && highlightedTelegramMsgId !== null}
-                  />
-                </div>
-              ))}
-            </div>
-            {messages.length === 0 && (
-              <div style={styles.placeholder}>No messages yet. Waiting for new ones...</div>
-            )}
-          </div>
-        )}
-      </div>
+    <div className="flex h-full overflow-hidden bg-tg-surface dark:bg-tg-surface-dark">
+      <Sidebar
+        pipelines={pipelines}
+        activePipelineId={activePipelineId}
+        onSelect={selectPipeline}
+        status={status}
+      />
+      <MessageFeed
+        messages={messages}
+        loading={loading}
+        loadingMore={loadingMore}
+        hasMore={hasMore}
+        loadingMoreRef={loadingMoreRef}
+        prependCountRef={prependCountRef}
+        shouldAutoScrollRef={shouldAutoScrollRef}
+        onLoadMore={loadOlderMessages}
+        onBlockSender={blockSender}
+        onReplyClick={handleReplyHighlight}
+        onImageClick={openLightbox}
+        highlightedTelegramMsgId={highlightedTelegramMsgId}
+        activePipelineId={activePipelineId}
+      />
       {lightboxIndex !== null && imageUrls[lightboxIndex] && (
         <ImageViewer
           url={imageUrls[lightboxIndex]}
@@ -275,31 +153,14 @@ export default function App() {
         />
       )}
       {toast && (
-        <div style={{
-          position: 'fixed', bottom: '24px', right: '24px',
-          background: toast.type === 'success' ? '#323232' : '#c62828',
-          color: '#fff', padding: '10px 18px', borderRadius: '6px',
-          fontSize: '13px', boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-          zIndex: 9999, pointerEvents: 'none',
-        }}>
+        <div
+          className={`fixed bottom-6 right-6 text-white px-[18px] py-2.5 rounded-md text-[13px] shadow-[0_2px_8px_rgba(0,0,0,0.3)] z-[9999] pointer-events-none ${
+            toast.type === 'success' ? 'bg-[#323232]' : 'bg-[#c62828]'
+          }`}
+        >
           {toast.message}
         </div>
       )}
     </div>
   );
 }
-
-const styles: Record<string, any> = {
-  root: { display: 'flex', height: '100%', overflow: 'hidden' },
-  sidebar: { width: '260px', borderRight: '1px solid var(--border-color)', background: 'var(--bg-primary)', display: 'flex', flexDirection: 'column', overflowY: 'auto' },
-  sidebarTitle: { padding: '16px', fontWeight: 700, fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' },
-  sidebarItem: { padding: '12px 16px', cursor: 'pointer', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '6px', margin: '2px 8px', color: 'var(--text-primary)' },
-  pipelineDot: (enabled: boolean) => ({ width: 8, height: 8, borderRadius: '50%', background: enabled ? '#4caf50' : '#bbb', flexShrink: 0 }),
-  connectionStatus: { marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' },
-  connectionDot: (status: string) => ({ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: status === 'connected' ? '#4caf50' : status === 'connecting' ? '#ff9800' : '#f44336' }),
-  empty: { padding: '16px', fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center' as const, lineHeight: 1.6 },
-  feed: { flex: 1, background: 'var(--bg-primary)', overflow: 'hidden', display: 'flex', flexDirection: 'column' },
-  scrollArea: { flex: 1, overflowY: 'auto' as const },
-  placeholder: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '14px', textAlign: 'center' as const },
-  datePill: { position: 'absolute' as const, top: '10px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.45)', color: '#fff', fontSize: '12px', fontWeight: 500, padding: '4px 12px', borderRadius: '12px', pointerEvents: 'none' as const, zIndex: 10, transition: 'opacity 0.3s ease', whiteSpace: 'nowrap' as const },
-};

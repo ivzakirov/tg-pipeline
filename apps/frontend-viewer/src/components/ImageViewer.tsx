@@ -28,75 +28,51 @@ export default function ImageViewer({ url, onClose, onPrev, onNext, hasPrev, has
 
   const parts = url.split('/');
   const filename = `photo_${parts[parts.length - 1]}.jpg`;
-
   const isTransposed = rotation % 180 !== 0;
 
+  const btnClass = 'bg-white/15 border-none rounded-lg text-white text-lg w-[42px] h-[42px] cursor-pointer flex items-center justify-center no-underline';
+
   return (
-    <div style={styles.overlay} onClick={onClose}>
-      <div style={styles.toolbar} onClick={(e) => e.stopPropagation()}>
-        <button style={styles.btn} onClick={rotate} title="Rotate">↻</button>
+    <div className="fixed inset-0 z-[10000] bg-black/92 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute top-4 right-4 flex gap-2 z-10" onClick={(e) => e.stopPropagation()}>
+        <button className={btnClass} onClick={rotate} title="Rotate">↻</button>
         <a
           href={url}
           download={filename}
-          style={styles.btn as React.CSSProperties}
+          className={btnClass}
           title="Download"
           onClick={(e) => e.stopPropagation()}
         >⬇</a>
-        <button style={styles.btn} onClick={(e) => { e.stopPropagation(); onClose(); }} title="Close">✕</button>
+        <button className={btnClass} onClick={(e) => { e.stopPropagation(); onClose(); }} title="Close">✕</button>
       </div>
 
       {hasPrev && (
-        <button style={{ ...styles.arrow, left: '16px' }} onClick={(e) => { e.stopPropagation(); onPrev?.(); }}>‹</button>
+        <button
+          className="absolute top-1/2 left-4 -translate-y-1/2 bg-white/15 border-none rounded-full text-white text-[40px] w-14 h-14 cursor-pointer flex items-center justify-center z-10 leading-none"
+          onClick={(e) => { e.stopPropagation(); onPrev?.(); }}
+        >‹</button>
       )}
       {hasNext && (
-        <button style={{ ...styles.arrow, right: '16px' }} onClick={(e) => { e.stopPropagation(); onNext?.(); }}>›</button>
+        <button
+          className="absolute top-1/2 right-4 -translate-y-1/2 bg-white/15 border-none rounded-full text-white text-[40px] w-14 h-14 cursor-pointer flex items-center justify-center z-10 leading-none"
+          onClick={(e) => { e.stopPropagation(); onNext?.(); }}
+        >›</button>
       )}
 
-      <div style={styles.imageWrap} onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
         <img
           src={url}
           alt=""
           style={{
-            ...styles.image,
             maxWidth: isTransposed ? '90vh' : '90vw',
             maxHeight: isTransposed ? '90vw' : '90vh',
             transform: `rotate(${rotation}deg)`,
+            objectFit: 'contain',
+            transition: 'transform 0.2s ease',
+            borderRadius: '4px',
           }}
         />
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  overlay: {
-    position: 'fixed', inset: 0, zIndex: 10000,
-    background: 'rgba(0,0,0,0.92)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  toolbar: {
-    position: 'absolute', top: '16px', right: '16px',
-    display: 'flex', gap: '8px', zIndex: 1,
-  },
-  btn: {
-    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px',
-    color: '#fff', fontSize: '18px', width: '42px', height: '42px',
-    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    textDecoration: 'none',
-  },
-  arrow: {
-    position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%',
-    color: '#fff', fontSize: '40px', width: '56px', height: '56px',
-    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    zIndex: 1, lineHeight: 1,
-  },
-  imageWrap: {
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  },
-  image: {
-    objectFit: 'contain',
-    transition: 'transform 0.2s ease',
-    borderRadius: '4px',
-  },
-};

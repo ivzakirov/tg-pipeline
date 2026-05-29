@@ -8,6 +8,11 @@ export default defineConfig({
     assetPrefix: process.env['ASSET_PREFIX'] ?? 'http://localhost/remotes/viewer/',
   },
   tools: {
+    postcss: {
+      postcssOptions: {
+        plugins: [require('tailwindcss'), require('autoprefixer')],
+      },
+    },
     rspack: {
       plugins: [
         new ModuleFederationPlugin({

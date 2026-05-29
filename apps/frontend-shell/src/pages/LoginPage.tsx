@@ -33,28 +33,30 @@ export default function LoginPage() {
     }
   };
 
+  const inputClass = 'px-3.5 py-2.5 rounded-lg border border-tg-border-input dark:border-tg-border-input-dark text-[15px] outline-none bg-tg-input dark:bg-tg-input-dark text-tg-text dark:text-tg-text-dark w-full';
+
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>TG Pipeline</h1>
-        <form onSubmit={handleSubmit} style={styles.form}>
+    <div className="flex items-center justify-center min-h-screen bg-tg-bg dark:bg-tg-bg-dark">
+      <div className="bg-tg-surface dark:bg-tg-surface-dark p-10 rounded-xl w-[360px] shadow-card dark:shadow-card-dark">
+        <h1 className="text-2xl font-bold mb-6 text-center text-tg-text dark:text-tg-text-dark">TG Pipeline</h1>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <input
-            style={styles.input}
+            className={inputClass}
             type="email"
             placeholder="Email"
             value={email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
           <input
-            style={styles.input}
+            className={inputClass}
             type="password"
             placeholder="Password"
             value={password}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
-          <label style={styles.rememberRow}>
+          <label className="flex items-center gap-2 text-sm text-tg-text-sub dark:text-tg-text-sub-dark cursor-pointer">
             <input
               type="checkbox"
               checked={rememberMe}
@@ -62,28 +64,20 @@ export default function LoginPage() {
             />
             <span>Remember me</span>
           </label>
-          {error && <p style={styles.error}>{error}</p>}
-          <button style={styles.button} type="submit" disabled={loading}>
+          {error && <p className="text-[#e53935] text-sm">{error}</p>}
+          <button
+            className="py-3 rounded-lg bg-tg-blue text-white border-none text-[15px] font-semibold cursor-pointer disabled:opacity-60"
+            type="submit"
+            disabled={loading}
+          >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
-        <p style={styles.footer}>
-          No account? <Link to="/register" style={styles.link}>Create one</Link>
+        <p className="mt-4 text-center text-sm text-tg-text-sub dark:text-tg-text-sub-dark">
+          No account?{' '}
+          <Link to="/register" className="text-tg-blue no-underline">Create one</Link>
         </p>
       </div>
     </div>
   );
 }
-
-const styles: Record<string, React.CSSProperties> = {
-  container: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: 'var(--bg-body)' },
-  card: { background: 'var(--bg-primary)', padding: '40px', borderRadius: '12px', width: '360px', boxShadow: '0 4px 24px var(--shadow-card)' },
-  title: { fontSize: '24px', fontWeight: 700, marginBottom: '24px', textAlign: 'center', color: 'var(--text-primary)' },
-  form: { display: 'flex', flexDirection: 'column', gap: '12px' },
-  input: { padding: '10px 14px', borderRadius: '8px', border: '1px solid var(--border-input)', fontSize: '15px', outline: 'none', background: 'var(--bg-input)', color: 'var(--text-primary)' },
-  rememberRow: { display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)', cursor: 'pointer' },
-  button: { padding: '12px', borderRadius: '8px', background: '#2AABEE', color: '#fff', border: 'none', fontSize: '15px', fontWeight: 600, cursor: 'pointer' },
-  error: { color: '#e53935', fontSize: '13px' },
-  footer: { marginTop: '16px', textAlign: 'center', fontSize: '14px', color: 'var(--text-secondary)' },
-  link: { color: '#2AABEE', textDecoration: 'none' },
-};
