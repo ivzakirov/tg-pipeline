@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import './index.css';
-import api from './api';
 import { useSocket } from './hooks/useSocket';
 import { useToast } from './hooks/useToast';
 import { useLightbox } from './hooks/useLightbox';
 import Sidebar from './components/Sidebar';
 import MessageFeed from './components/MessageFeed';
 import ImageViewer from './components/ImageViewer';
+import * as pipelineService from './services/pipelineService';
+import * as messageService from './services/messageService';
 import type { Message, Pipeline } from './types';
 
 function getToken(): string | null {
@@ -23,9 +24,7 @@ export default function App() {
   const [highlightedTelegramMsgId, setHighlightedTelegramMsgId] = useState<number | null>(null);
 
   const activePipelineIdRef = useRef<string | null>(null);
-  const shouldAutoScrollRef = useRef(true);
   const loadingMoreRef = useRef(false);
-  const prependCountRef = useRef(0);
 
   const { toast, showToast } = useToast();
   const { lightboxIndex, setLightboxIndex, imageUrls, openLightbox } = useLightbox(messages);
@@ -40,7 +39,7 @@ export default function App() {
   const { subscribe, unsubscribe, status } = useSocket(getToken(), handleMessage);
 
   useEffect(() => {
-    api.get('/api/pipelines').then(({ data }) => setPipelines(data));
+    pipelineService.getPipelines().then(setPipelines);
   }, []);
 
   const selectPipeline = async (pipelineId: string) => {
@@ -50,13 +49,11 @@ export default function App() {
     setMessages([]);
     setHasMore(false);
     loadingMoreRef.current = false;
-    prependCountRef.current = 0;
     setLoading(true);
     subscribe(pipelineId);
     try {
-      const { data } = await api.get(`/api/messages/${pipelineId}?limit=50`);
+      const data = await messageService.getMessages(pipelineId);
       if (activePipelineIdRef.current === pipelineId) {
-        shouldAutoScrollRef.current = true;
         setMessages((data as Message[]).reverse());
         setHasMore(data.length >= 50);
       }
@@ -73,14 +70,11 @@ export default function App() {
     setLoadingMore(true);
     const pipelineId = activePipelineIdRef.current;
     try {
-      const { data } = await api.get(
-        `/api/messages/${pipelineId}?limit=50&before=${encodeURIComponent(oldest.receivedAt)}`,
-      );
+      const data = await messageService.getOlderMessages(pipelineId, oldest.receivedAt);
       if (activePipelineIdRef.current !== pipelineId) return;
       if (data.length < 50) setHasMore(false);
       if (data.length === 0) return;
       const older = (data as Message[]).reverse();
-      prependCountRef.current = older.length;
       setMessages((prev) => [...older, ...prev]);
     } finally {
       loadingMoreRef.current = false;
@@ -91,7 +85,7 @@ export default function App() {
   const blockSender = async (senderId: number, senderName: string) => {
     if (!activePipelineId) return;
     try {
-      const { data: pipeline } = await api.get(`/api/pipelines/${activePipelineId}`);
+      const pipeline = await pipelineService.getPipeline(activePipelineId);
       const senderIdStr = String(senderId);
       const newCondition = { type: 'sender', value: senderIdStr, negate: true, label: senderName };
       const existing = pipeline.filterConfig;
@@ -107,7 +101,7 @@ export default function App() {
       } else {
         newConfig = { operator: 'AND', children: [existing, newCondition] };
       }
-      await api.patch(`/api/pipelines/${activePipelineId}`, { filterConfig: newConfig });
+      await pipelineService.patchPipeline(activePipelineId, { filterConfig: newConfig });
       showToast(`Blocked: ${senderName}`);
     } catch {
       showToast('Failed to block sender', 'error');
@@ -132,9 +126,6 @@ export default function App() {
         loading={loading}
         loadingMore={loadingMore}
         hasMore={hasMore}
-        loadingMoreRef={loadingMoreRef}
-        prependCountRef={prependCountRef}
-        shouldAutoScrollRef={shouldAutoScrollRef}
         onLoadMore={loadOlderMessages}
         onBlockSender={blockSender}
         onReplyClick={handleReplyHighlight}

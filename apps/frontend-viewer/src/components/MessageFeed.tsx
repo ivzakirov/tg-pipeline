@@ -8,9 +8,6 @@ interface Props {
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
-  loadingMoreRef: React.MutableRefObject<boolean>;
-  prependCountRef: React.MutableRefObject<number>;
-  shouldAutoScrollRef: React.MutableRefObject<boolean>;
   onLoadMore: () => void;
   onBlockSender: (senderId: number, senderName: string) => void;
   onReplyClick: (replyToMsgId: number) => void;
@@ -33,7 +30,6 @@ function formatDateLabel(dateStr: string): string {
 
 export default function MessageFeed({
   messages, loading, loadingMore, hasMore,
-  loadingMoreRef, prependCountRef, shouldAutoScrollRef,
   onLoadMore, onBlockSender, onReplyClick, onImageClick,
   highlightedTelegramMsgId, activePipelineId,
 }: Props) {
@@ -41,6 +37,9 @@ export default function MessageFeed({
   const [dateLabel, setDateLabel] = useState<string | null>(null);
   const [dateLabelVisible, setDateLabelVisible] = useState(false);
   const dateLabelTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const prevLengthRef = useRef(0);
+  const prevFirstIdRef = useRef<number | null>(null);
 
   const rowVirtualizer = useVirtualizer({
     count: messages.length,
@@ -50,10 +49,20 @@ export default function MessageFeed({
   });
 
   useEffect(() => {
-    if (prependCountRef.current > 0) {
-      const idx = prependCountRef.current;
-      prependCountRef.current = 0;
-      rowVirtualizer.scrollToIndex(idx, { align: 'start', behavior: 'auto' });
+    shouldAutoScrollRef.current = true;
+    prevLengthRef.current = 0;
+    prevFirstIdRef.current = null;
+  }, [activePipelineId]);
+
+  useEffect(() => {
+    const prevLen = prevLengthRef.current;
+    const prevFirstId = prevFirstIdRef.current;
+    const curFirstId = messages[0] ? Number(messages[0].telegramMessageId) : null;
+    prevLengthRef.current = messages.length;
+    prevFirstIdRef.current = curFirstId;
+
+    if (prevLen > 0 && curFirstId !== prevFirstId && messages.length > prevLen) {
+      rowVirtualizer.scrollToIndex(messages.length - prevLen, { align: 'start', behavior: 'auto' });
     } else if (shouldAutoScrollRef.current && messages.length > 0) {
       rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
     }
@@ -63,7 +72,7 @@ export default function MessageFeed({
     const el = parentRef.current;
     if (!el) return;
     shouldAutoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
-    if (el.scrollTop < 200 && !loadingMoreRef.current && hasMore) {
+    if (el.scrollTop < 200 && !loadingMore && hasMore) {
       onLoadMore();
     }
     const firstVi = rowVirtualizer.getVirtualItems()[0];
@@ -74,7 +83,7 @@ export default function MessageFeed({
     setDateLabelVisible(true);
     if (dateLabelTimeoutRef.current) clearTimeout(dateLabelTimeoutRef.current);
     dateLabelTimeoutRef.current = setTimeout(() => setDateLabelVisible(false), 2000);
-  }, [hasMore, messages, onLoadMore, loadingMoreRef, shouldAutoScrollRef]); // rowVirtualizer is stable
+  }, [hasMore, messages, onLoadMore, loadingMore]); // rowVirtualizer is stable
 
   const handleReplyClick = useCallback((replyToMsgId: number) => {
     const targetId = Number(replyToMsgId);

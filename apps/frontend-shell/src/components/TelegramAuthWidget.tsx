@@ -1,91 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
-import api from '../api/axios';
+import React from 'react';
+import { useTelegramAuth } from '../hooks/useTelegramAuth';
 
-type Step = 'idle' | 'phone' | 'code' | '2fa';
-type Status = 'loading' | 'connected' | 'disconnected';
+const inputClass = 'px-3 py-2 rounded-lg border border-[#ddd] text-sm outline-none w-full';
+const btnPrimaryClass = 'w-full py-2.5 rounded-lg bg-tg-blue text-white border-none cursor-pointer font-semibold text-sm disabled:opacity-60';
 
 export default function TelegramAuthWidget() {
-  const [status, setStatus] = useState<Status>('loading');
-  const [phone, setPhone] = useState<string | null>(null);
-
-  const [step, setStep] = useState<Step>('idle');
-  const [phoneInput, setPhoneInput] = useState('');
-  const [codeInput, setCodeInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [phoneCodeHash, setPhoneCodeHash] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    api.get('/telegram-auth/status').then(({ data }) => {
-      if (data.connected) { setStatus('connected'); setPhone(data.phone ?? null); }
-      else setStatus('disconnected');
-    }).catch(() => setStatus('disconnected'));
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setStep('idle'); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
-
-  const reset = () => {
-    setStep('idle'); setPhoneInput(''); setCodeInput('');
-    setPasswordInput(''); setPhoneCodeHash(''); setError('');
-  };
-
-  const sendCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true); setError('');
-    try {
-      const { data } = await api.post('/telegram-auth/send-code', { phone: phoneInput });
-      setPhoneCodeHash(data.phoneCodeHash);
-      setStep('code');
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Failed to send code');
-    } finally { setBusy(false); }
-  };
-
-  const verifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true); setError('');
-    try {
-      await api.post('/telegram-auth/verify-code', { phone: phoneInput, code: codeInput, phoneCodeHash });
-      setStatus('connected'); setPhone(phoneInput); reset();
-    } catch (err: any) {
-      const msg = err.response?.data?.message ?? '';
-      if (msg.includes('2FA') || msg.includes('password')) setStep('2fa');
-      else setError(msg || 'Invalid code');
-    } finally { setBusy(false); }
-  };
-
-  const verify2fa = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setBusy(true); setError('');
-    try {
-      await api.post('/telegram-auth/verify-2fa', { password: passwordInput });
-      setStatus('connected'); setPhone(phoneInput); reset();
-    } catch (err: any) {
-      setError(err.response?.data?.message ?? 'Wrong password');
-    } finally { setBusy(false); }
-  };
-
-  const disconnect = async () => {
-    if (!confirm('Disconnect Telegram account?')) return;
-    setBusy(true);
-    try {
-      await api.delete('/telegram-auth');
-      setStatus('disconnected'); setPhone(null);
-    } finally { setBusy(false); }
-  };
-
-  const inputClass = 'px-3 py-2 rounded-lg border border-[#ddd] text-sm outline-none w-full';
-  const btnPrimaryClass = 'w-full py-2.5 rounded-lg bg-tg-blue text-white border-none cursor-pointer font-semibold text-sm disabled:opacity-60';
+  const {
+    status, phone, step,
+    phoneInput, codeInput, passwordInput, error, busy,
+    setPhoneInput, setCodeInput, setPasswordInput, setStep, reset,
+    sendCode, verifyCode, verify2fa, disconnect,
+  } = useTelegramAuth();
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       {status === 'loading' && (
         <span className="text-xs px-2.5 py-1 rounded-xl bg-[#333] text-[#888] whitespace-nowrap">Telegram…</span>
       )}
@@ -96,18 +24,14 @@ export default function TelegramAuthWidget() {
             className="text-xs px-2.5 py-1 rounded-lg bg-transparent border border-[#555] text-[#aaa] cursor-pointer"
             onClick={disconnect}
             disabled={busy}
-          >
-            Disconnect
-          </button>
+          >Disconnect</button>
         </div>
       )}
       {status === 'disconnected' && step === 'idle' && (
         <button
           className="px-3.5 py-1.5 rounded-md bg-tg-blue text-white border-none cursor-pointer text-sm font-semibold"
           onClick={() => setStep('phone')}
-        >
-          Connect Telegram
-        </button>
+        >Connect Telegram</button>
       )}
 
       {step !== 'idle' && (
@@ -156,9 +80,7 @@ export default function TelegramAuthWidget() {
                 type="button"
                 className="bg-transparent border-none text-[#888] cursor-pointer text-sm text-center"
                 onClick={() => setStep('phone')}
-              >
-                ← Back
-              </button>
+              >← Back</button>
             </form>
           )}
 

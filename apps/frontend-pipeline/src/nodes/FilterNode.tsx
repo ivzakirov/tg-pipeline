@@ -9,32 +9,23 @@ export interface FilterNodeData {
   [key: string]: unknown;
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  keyword:   '🔤 Keyword',
-  regex:     '🔣 Regex',
-  sender:    '👤 Sender',
-  has_media: '📎 Has Media',
-  media_type:'🖼 Media Type',
-  AND:       '⋀ AND',
-  OR:        '⋁ OR',
-  NOT:       '¬ NOT',
+const FILTER_TYPE_CONFIG: Record<string, { label: string; placeholder?: string; hasValue?: true; isLogic?: true }> = {
+  keyword:    { label: '🔤 Keyword',    placeholder: 'e.g. bitcoin',              hasValue: true },
+  regex:      { label: '🔣 Regex',      placeholder: 'e.g. \\d{4}',              hasValue: true },
+  sender:     { label: '👤 Sender',     placeholder: 'sender name or ID',          hasValue: true },
+  has_media:  { label: '📎 Has Media' },
+  media_type: { label: '🖼 Media Type', placeholder: 'photo / video / document',  hasValue: true },
+  AND:        { label: '⋀ AND',         isLogic: true },
+  OR:         { label: '⋁ OR',          isLogic: true },
+  NOT:        { label: '¬ NOT',         isLogic: true },
 };
-
-const VALUE_PLACEHOLDER: Record<string, string> = {
-  keyword:    'e.g. bitcoin',
-  regex:      'e.g. \\d{4}',
-  sender:     'sender name or ID',
-  media_type: 'photo / video / document',
-};
-
-const HAS_VALUE = ['keyword', 'regex', 'sender', 'media_type'];
-const IS_LOGIC  = ['AND', 'OR', 'NOT'];
 
 export default function FilterNode({ id, data }: NodeProps) {
   const d = data as FilterNodeData;
   const { updateNodeData, deleteElements } = useReactFlow();
-  const isLogic  = IS_LOGIC.includes(d.filterType);
-  const hasValue = HAS_VALUE.includes(d.filterType);
+  const cfg = FILTER_TYPE_CONFIG[d.filterType] ?? { label: d.filterType };
+  const isLogic  = !!cfg.isLogic;
+  const hasValue = !!cfg.hasValue;
 
   const borderColor = isLogic ? '#ff9800' : '#4caf50';
 
@@ -47,7 +38,7 @@ export default function FilterNode({ id, data }: NodeProps) {
 
       <div className="flex items-center justify-between gap-1">
         <div className="font-semibold text-[13px] flex-1 text-tg-text dark:text-tg-text-dark">
-          {TYPE_LABELS[d.filterType] ?? d.filterType}
+          {cfg.label}
         </div>
         <button
           className="nodrag bg-transparent border-none cursor-pointer text-base leading-none text-[#bbb] p-0.5 rounded"
@@ -59,7 +50,7 @@ export default function FilterNode({ id, data }: NodeProps) {
       {hasValue && (
         <input
           className="nodrag text-[11px] px-1.5 py-1 rounded border border-tg-border-input dark:border-tg-border-input-dark outline-none w-full bg-tg-input dark:bg-tg-input-dark text-tg-text dark:text-tg-text-dark box-border"
-          placeholder={VALUE_PLACEHOLDER[d.filterType] ?? 'value'}
+          placeholder={cfg.placeholder ?? 'value'}
           value={d.label ?? d.value ?? ''}
           onChange={(e) => updateNodeData(id, { value: e.target.value, label: undefined })}
           onKeyDown={(e) => e.stopPropagation()}
